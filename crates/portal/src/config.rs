@@ -28,6 +28,7 @@ pub struct Config {
 pub struct PortalConfig {
     pub size: f32,
     pub pos: RelPos,
+    pub edge_offset: f32,
 }
 
 #[derive(Deserialize)]

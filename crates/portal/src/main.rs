@@ -145,16 +145,14 @@ fn spawner(
 ) {
     if timer.0.tick(time.delta()).just_finished() {
         let angle = fastrand::f32() * std::f32::consts::PI * 2.0;
+        let distance = (config.portal.size - config.portal.edge_offset)
+            + fastrand::f32() * config.portal.edge_offset * 2.;
         let particle = cmd
             .spawn((
                 Particle,
                 Mesh2d(mesh.0.clone()),
                 MeshMaterial2d(materials.add(Color::WHITE)),
-                Transform::from_xyz(
-                    angle.cos() * config.portal.size,
-                    angle.sin() * config.portal.size,
-                    0.0,
-                ),
+                Transform::from_xyz(angle.cos() * distance, angle.sin() * distance, 0.0),
                 TrailSpawnTimer(Timer::from_seconds(
                     config.particle.trail.spawn_interval,
                     TimerMode::Repeating,

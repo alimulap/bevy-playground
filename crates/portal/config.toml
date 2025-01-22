@@ -1,11 +1,12 @@
 [portal]
 size = 100
 pos = "center"
+edge_offset = 15
 
 [particle]
 size = 3
 count = 20
-spawn_interval = 0.01
+spawn_interval = 0.03
 move_speed = 100
 spiral_offset_angle = 45
 
