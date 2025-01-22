@@ -1,6 +1,15 @@
-portal_size = 100
-portal_pos = "center"
-particle_size = 3
-particle_count = 20
-spawn_interval = 0.05
+[portal]
+size = 100
+pos = "center"
+
+[particle]
+size = 3
+count = 20
+spawn_interval = 0.01
 move_speed = 100
+spiral_offset_angle = 45
+
+[particle.trail]
+spawn_interval = 0.05
+timeout = 1
+count = 20

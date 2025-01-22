@@ -20,13 +20,33 @@ impl Plugin for ConfigPlugin {
 
 #[derive(Resource, Deserialize)]
 pub struct Config {
-    pub portal_size: f32,
-    pub portal_pos: RelPos,
-    pub particle_size: u32,
-    #[allow(unused)]
-    pub particle_count: u32,
+    pub portal: PortalConfig,
+    pub particle: ParticleConfig,
+}
+
+#[derive(Deserialize)]
+pub struct PortalConfig {
+    pub size: f32,
+    pub pos: RelPos,
+}
+
+#[derive(Deserialize)]
+pub struct ParticleConfig {
+    pub size: u32,
+    #[allow(dead_code)]
+    pub count: u32,
     pub spawn_interval: f32,
     pub move_speed: f32,
+    pub spiral_offset_angle: f32,
+    pub trail: TrailConfig,
+}
+
+#[derive(Deserialize)]
+pub struct TrailConfig {
+    pub spawn_interval: f32,
+    pub timeout: f32,
+    #[allow(dead_code)]
+    pub count: u32,
 }
 
 #[derive(Debug, Default)]

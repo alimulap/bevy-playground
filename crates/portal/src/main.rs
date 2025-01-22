@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{color::palettes::css::WHITE, prelude::*};
 // use bevy::sprite::{Wireframe2dConfig, Wireframe2dPlugin};
 use config::{Config, ConfigPlugin, RelPos};
 
@@ -31,8 +31,10 @@ fn main() {
             (
                 //toggle_wireframe,
                 spawner,
-                move_to_center,
+                move_spiral_to_center,
                 despawner,
+                trail_spawner,
+                trail_update,
                 close_on_q,
             ),
         )
@@ -45,12 +47,14 @@ struct Portal;
 #[derive(Component)]
 struct Particle;
 
-#[derive(Component)]
+#[derive(Resource)]
 struct ParticleMesh(Handle<Mesh>);
 
 #[derive(Component)]
-struct DebugText;
+struct Trail;
 
+#[derive(Component)]
+struct DebugText;
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -58,14 +62,14 @@ fn setup(
     config: Res<Config>,
 ) {
     commands.spawn(Camera2d);
-    commands.insert_resource(SpawnTimer(Timer::from_seconds(
-        config.spawn_interval,
+    commands.insert_resource(ParticleSpawnTimer(Timer::from_seconds(
+        config.particle.spawn_interval,
         TimerMode::Repeating,
     )));
 
-    let particle = meshes.add(Circle::new(config.particle_size as f32));
+    let particle = meshes.add(Circle::new(config.particle.size as f32));
 
-    let portal_pos = match config.portal_pos {
+    let portal_pos = match config.portal.pos {
         RelPos::Center => (0., 0.),
         RelPos::TopRight => (WINDOW_WIDTH / 2., WINDOW_HEIGHT / 2.),
         RelPos::TopLeft => (-WINDOW_WIDTH / 2., WINDOW_HEIGHT / 2.),
@@ -96,7 +100,7 @@ fn setup(
         // })
         ;
 
-    commands.spawn(ParticleMesh(particle));
+    commands.insert_resource(ParticleMesh(particle));
 
     commands.spawn((
         Text::new("Press space to toggle wireframes"),
@@ -122,14 +126,20 @@ fn setup(
 }
 
 #[derive(Resource)]
-struct SpawnTimer(Timer);
+struct ParticleSpawnTimer(Timer);
+
+#[derive(Component)]
+struct TrailSpawnTimer(Timer);
+
+#[derive(Component)]
+struct TrailTimeout(Timer);
 
 fn spawner(
     mut cmd: Commands,
     time: Res<Time>,
-    mut timer: ResMut<SpawnTimer>,
+    mut timer: ResMut<ParticleSpawnTimer>,
     portal: Single<Entity, With<Portal>>,
-    mesh: Single<&ParticleMesh>,
+    mesh: Res<ParticleMesh>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     config: Res<Config>,
 ) {
@@ -141,17 +151,21 @@ fn spawner(
                 Mesh2d(mesh.0.clone()),
                 MeshMaterial2d(materials.add(Color::WHITE)),
                 Transform::from_xyz(
-                    angle.cos() * config.portal_size,
-                    angle.sin() * config.portal_size,
+                    angle.cos() * config.portal.size,
+                    angle.sin() * config.portal.size,
                     0.0,
                 ),
+                TrailSpawnTimer(Timer::from_seconds(
+                    config.particle.trail.spawn_interval,
+                    TimerMode::Repeating,
+                )),
             ))
             .id();
         cmd.entity(portal.into_inner()).add_child(particle);
     }
 }
 
-fn move_to_center(
+fn move_spiral_to_center(
     time: Res<Time>,
     portal: Single<&Transform, (With<Portal>, Without<Particle>)>,
     mut particles: Query<&mut Transform, (With<Particle>, Without<Portal>)>,
@@ -160,10 +174,10 @@ fn move_to_center(
 ) {
     for mut particle in particles.iter_mut() {
         let distance = portal.translation - particle.translation;
-        let angle = distance.y.atan2(distance.x);
+        let angle = distance.y.atan2(distance.x) - config.particle.spiral_offset_angle.to_radians();
         particle.translation += Vec3::new(
-            angle.cos() * config.move_speed * time.delta_secs(),
-            angle.sin() * config.move_speed * time.delta_secs(),
+            angle.cos() * config.particle.move_speed * time.delta_secs(),
+            angle.sin() * config.particle.move_speed * time.delta_secs(),
             0.0,
         );
     }
@@ -176,9 +190,51 @@ fn despawner(
     config: Res<Config>,
 ) {
     for (particle, transform) in particles.iter() {
-        if transform.translation.distance(portal.translation) <= config.particle_size as f32 {
+        if transform.translation.distance(portal.translation) <= config.particle.size as f32 {
             commands.entity(particle).despawn();
         }
+    }
+}
+
+fn trail_spawner(
+    mut cmd: Commands,
+    mut particles: Query<(&Transform, &mut TrailSpawnTimer), With<Particle>>,
+    mesh: Res<ParticleMesh>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    time: Res<Time>,
+    config: Res<Config>,
+) {
+    for (particle, mut timer) in particles.iter_mut() {
+        if timer.0.tick(time.delta()).just_finished() {
+            cmd.spawn((
+                Trail,
+                Mesh2d(mesh.0.clone()),
+                MeshMaterial2d(materials.add(ColorMaterial {
+                    color: WHITE.with_alpha(0.5).into(),
+                    ..Default::default()
+                })),
+                Transform::from_translation(particle.translation),
+                TrailTimeout(Timer::from_seconds(
+                    config.particle.trail.timeout,
+                    TimerMode::Once,
+                )),
+            ));
+        }
+    }
+}
+
+fn trail_update(
+    mut cmd: Commands,
+    time: Res<Time>,
+    mut trails: Query<(Entity, &mut Transform, &mut TrailTimeout), With<Trail>>,
+    config: Res<Config>,
+) {
+    for (trail, mut transform, mut timer) in trails.iter_mut() {
+        if timer.0.tick(time.delta()).just_finished() {
+            cmd.entity(trail).despawn();
+        }
+        let scale = timer.0.remaining_secs() / config.particle.trail.timeout;
+        transform.scale = Vec3::splat(scale);
     }
 }
 
