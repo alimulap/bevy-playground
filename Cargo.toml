@@ -1,0 +1,43 @@
+[package]
+name = "playground"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = "0.15.0"
+fastrand = "2.3.0"
+serde = { version = "1.0.217", features = ["derive"] }
+toml = "0.8.19"
+
+[workspace]
+members = [
+  "crates/*"
+]
+
+[workspace.dependencies]
+bevy = "0.15.0"
+serde = { version = "1.0.217", features = ["derive"] }
+toml = "0.8.19"
+fastrand = "2.3.0"
+
+# Enable a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 0
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.dev-opt]
+inherits = "dev"
+opt-level = 1
+
+[profile.dev-opt.package."*"]
+opt-level = 3
+
+[profile.release]
+strip = true      # Automatically strip symbols from the binary.
+opt-level = "z"   # Optimize for size.
+lto = true
+codegen-units = 1
+panic = "abort"

@@ -1,0 +1,6 @@
+portal_size = 100
+portal_pos = "center"
+particle_size = 3
+particle_count = 20
+spawn_interval = 0.05
+move_speed = 100
