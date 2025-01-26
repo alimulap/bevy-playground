@@ -18,6 +18,8 @@ impl Plugin for UIPlugin {
                     text_ui_setup,
                     panel_setup,
                     input_ui_setup,
+                    input_field_i32_setup,
+                    input_field_i32_system,
                 ),
             );
     }
@@ -41,17 +43,18 @@ fn build_ui(mut cmd: Commands) {
             .spawn((Panel, PanelTitle::new("Control Panel")))
             .with_children(|parent| {
                 parent.spawn(TextUI::new("Kocag"));
+                parent.spawn(InputFieldI32UI);
                 parent
                     .spawn((Panel, PanelTitle::new("Debug"), DebugPanel::new()))
                     .with_children(|parent| {
                         parent.spawn((DebugPanelText, TextUI::new("")));
                     });
-                parent.spawn((InputUI, TextInputValue("1".into())));
+                parent.spawn((InputUI, InputUInitialValue("1".into())));
                 parent
                     .spawn((Panel, PanelTitle::new("Kocag")))
                     .with_children(|parent| {
                         parent.spawn(TextUI::new("Kocag"));
-                        parent.spawn((InputUI, TextInputValue("2".into())));
+                        parent.spawn((InputUI, InputUInitialValue("2".into())));
                     });
             });
     });
@@ -139,10 +142,15 @@ fn text_ui_setup(mut cmd: Commands, added_text_ui: Query<(Entity, Ref<TextUI>), 
 #[derive(Component)]
 struct InputUI;
 
-fn input_ui_setup(mut cmd: Commands, added_input_ui: Query<Entity, Added<InputUI>>) {
-    for entity in added_input_ui.iter() {
+#[derive(Component)]
+struct InputUInitialValue(String);
+
+fn input_ui_setup(
+    mut cmd: Commands,
+    added_input_ui: Query<(Entity, &InputUInitialValue), Added<InputUI>>,
+) {
+    for (entity, value) in added_input_ui.iter() {
         cmd.entity(entity).insert((
-            InputUI,
             Node {
                 border: UiRect::all(Val::Px(1.)),
                 ..default()
@@ -150,12 +158,49 @@ fn input_ui_setup(mut cmd: Commands, added_input_ui: Query<Entity, Added<InputUI
             BorderColor(Color::WHITE),
             BackgroundColor(Color::srgb(0.3, 0.3, 0.3)),
             TextInput,
+            TextInputValue(value.0.clone()),
             TextInputTextFont(TextFont::from_font_size(11.)),
+            // TextInputTextColor(TextColor::WHITE),
             TextInputSettings {
                 retain_on_submit: true,
                 ..Default::default()
             },
+            // TextInputInactive(false),
+            // FocusPolicy::Block,
         ));
+    }
+}
+
+#[derive(Component)]
+#[require(Node)]
+struct InputFieldI32UI;
+
+#[derive(Component)]
+struct InputFieldI32UIOldValue(String);
+
+fn input_field_i32_setup(mut cmd: Commands, input_field: Query<Entity, Added<InputFieldI32UI>>) {
+    for entity in input_field.iter() {
+        cmd.entity(entity).insert((
+            InputUI,
+            InputUInitialValue("1".into()),
+            InputFieldI32UIOldValue("1".into()),
+        ));
+    }
+}
+
+#[allow(clippy::type_complexity)]
+fn input_field_i32_system(
+    mut input_field: Query<
+        (Mut<TextInputValue>, &mut InputFieldI32UIOldValue),
+        (With<InputFieldI32UI>, Changed<TextInputValue>),
+    >,
+) {
+    for (mut value, mut old) in input_field.iter_mut() {
+        if value.0.parse::<i32>().is_ok() || value.0.is_empty() {
+            old.0 = value.0.clone();
+        } else {
+            value.0 = old.0.clone();
+        }
     }
 }
 
@@ -173,7 +218,7 @@ impl DebugPanel {
     pub fn new() -> Self {
         Self {
             content: vec![String::from(" "); 5],
-            timer: Timer::new(Duration::from_secs_f32(0.3), TimerMode::Repeating),
+            timer: Timer::new(Duration::from_secs_f32(0.1), TimerMode::Repeating),
             ready_push: false,
         }
     }
