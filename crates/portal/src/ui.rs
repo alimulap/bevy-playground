@@ -11,17 +11,11 @@ impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(TextInputPlugin)
             .add_systems(Startup, build_ui)
-            .add_systems(
-                Update,
-                (
-                    debug_text_system,
-                    text_ui_setup,
-                    panel_setup,
-                    input_ui_setup,
-                    input_field_i32_setup,
-                    input_field_i32_system,
-                ),
-            );
+            .add_systems(Update, (debug_text_system, input_field_i32_system))
+            .add_observer(create_panel)
+            .add_observer(create_text_ui)
+            .add_observer(create_input_ui)
+            .add_observer(create_input_field_i32);
     }
 }
 
@@ -82,44 +76,44 @@ impl Default for PanelMaxWidth {
     }
 }
 
-fn panel_setup(
+fn create_panel(
+    trigger: Trigger<OnAdd, Panel>,
     mut cmd: Commands,
-    added_panel: Query<(Entity, &PanelTitle, &PanelMaxWidth), Added<Panel>>,
+    added_panel: Query<(&PanelTitle, &PanelMaxWidth)>,
 ) {
-    for (entity, PanelTitle(title), PanelMaxWidth(width)) in added_panel.iter() {
-        let title = cmd
-            .spawn((TextUI::new(title), TextLayout {
-                justify: JustifyText::Center,
+    let (PanelTitle(title), PanelMaxWidth(width)) = added_panel.get(trigger.entity()).unwrap();
+    let title = cmd
+        .spawn((TextUI::new(title), TextLayout {
+            justify: JustifyText::Center,
+            ..default()
+        }))
+        .id();
+    let separator = cmd
+        .spawn((
+            Node {
+                border: UiRect::bottom(Val::Px(1.)),
+                margin: UiRect::bottom(Val::Px(5.)),
                 ..default()
-            }))
-            .id();
-        let separator = cmd
-            .spawn((
-                Node {
-                    border: UiRect::bottom(Val::Px(1.)),
-                    margin: UiRect::bottom(Val::Px(5.)),
-                    ..default()
-                },
-                BorderColor(Color::WHITE),
-            ))
-            .id();
-        cmd.entity(entity)
-            .insert((
-                Panel,
-                Node {
-                    max_width: *width,
-                    flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::SpaceBetween,
-                    border: UiRect::all(Val::Px(1.)),
-                    padding: UiRect::all(Val::Px(5.)),
-                    row_gap: Val::Px(3.),
-                    ..default()
-                },
-                BackgroundColor(Color::srgb(0.2, 0.2, 0.2)),
-                BorderColor(Color::WHITE),
-            ))
-            .insert_children(0, &[title, separator]);
-    }
+            },
+            BorderColor(Color::WHITE),
+        ))
+        .id();
+    cmd.entity(trigger.entity())
+        .insert((
+            Panel,
+            Node {
+                max_width: *width,
+                flex_direction: FlexDirection::Column,
+                justify_content: JustifyContent::SpaceBetween,
+                border: UiRect::all(Val::Px(1.)),
+                padding: UiRect::all(Val::Px(5.)),
+                row_gap: Val::Px(3.),
+                ..default()
+            },
+            BackgroundColor(Color::srgb(0.2, 0.2, 0.2)),
+            BorderColor(Color::WHITE),
+        ))
+        .insert_children(0, &[title, separator]);
 }
 
 #[derive(Component)]
@@ -132,11 +126,10 @@ impl TextUI {
     }
 }
 
-fn text_ui_setup(mut cmd: Commands, added_text_ui: Query<(Entity, Ref<TextUI>), Added<TextUI>>) {
-    for (entity, content) in added_text_ui.iter() {
-        cmd.entity(entity)
-            .insert((Text::new(content.0.clone()), TextFont::from_font_size(11.)));
-    }
+fn create_text_ui(trigger: Trigger<OnAdd, TextUI>, mut cmd: Commands, text_ui: Query<&TextUI>) {
+    let TextUI(content) = text_ui.get(trigger.entity()).unwrap();
+    cmd.entity(trigger.entity())
+        .insert((Text::new(content.clone()), TextFont::from_font_size(11.)));
 }
 
 #[derive(Component)]
@@ -145,30 +138,30 @@ struct InputUI;
 #[derive(Component)]
 struct InputUInitialValue(String);
 
-fn input_ui_setup(
+fn create_input_ui(
+    trigger: Trigger<OnAdd, InputUI>,
     mut cmd: Commands,
-    added_input_ui: Query<(Entity, &InputUInitialValue), Added<InputUI>>,
+    input_ui: Query<&InputUInitialValue>,
 ) {
-    for (entity, value) in added_input_ui.iter() {
-        cmd.entity(entity).insert((
-            Node {
-                border: UiRect::all(Val::Px(1.)),
-                ..default()
-            },
-            BorderColor(Color::WHITE),
-            BackgroundColor(Color::srgb(0.3, 0.3, 0.3)),
-            TextInput,
-            TextInputValue(value.0.clone()),
-            TextInputTextFont(TextFont::from_font_size(11.)),
-            // TextInputTextColor(TextColor::WHITE),
-            TextInputSettings {
-                retain_on_submit: true,
-                ..Default::default()
-            },
-            // TextInputInactive(false),
-            // FocusPolicy::Block,
-        ));
-    }
+    let InputUInitialValue(value) = input_ui.get(trigger.entity()).unwrap();
+    cmd.entity(trigger.entity()).insert((
+        Node {
+            border: UiRect::all(Val::Px(1.)),
+            ..default()
+        },
+        BorderColor(Color::WHITE),
+        BackgroundColor(Color::srgb(0.3, 0.3, 0.3)),
+        TextInput,
+        TextInputValue(value.clone()),
+        TextInputTextFont(TextFont::from_font_size(11.)),
+        // TextInputTextColor(TextColor::WHITE),
+        TextInputSettings {
+            retain_on_submit: true,
+            ..Default::default()
+        },
+        // TextInputInactive(false),
+        // FocusPolicy::Block,
+    ));
 }
 
 #[derive(Component)]
@@ -178,14 +171,12 @@ struct InputFieldI32UI;
 #[derive(Component)]
 struct InputFieldI32UIOldValue(String);
 
-fn input_field_i32_setup(mut cmd: Commands, input_field: Query<Entity, Added<InputFieldI32UI>>) {
-    for entity in input_field.iter() {
-        cmd.entity(entity).insert((
-            InputUI,
-            InputUInitialValue("1".into()),
-            InputFieldI32UIOldValue("1".into()),
-        ));
-    }
+fn create_input_field_i32(trigger: Trigger<OnAdd, InputFieldI32UI>, mut cmd: Commands) {
+    cmd.entity(trigger.entity()).insert((
+        InputUI,
+        InputUInitialValue("1".into()),
+        InputFieldI32UIOldValue("1".into()),
+    ));
 }
 
 #[allow(clippy::type_complexity)]
