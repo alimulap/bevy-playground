@@ -11,7 +11,15 @@ impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(TextInputPlugin)
             .add_systems(Startup, build_ui)
-            .add_systems(Update, (debug_text_system, text_ui_setup, panel_setup));
+            .add_systems(
+                Update,
+                (
+                    debug_text_system,
+                    text_ui_setup,
+                    panel_setup,
+                    input_ui_setup,
+                ),
+            );
     }
 }
 
@@ -30,27 +38,37 @@ fn build_ui(mut cmd: Commands) {
     ))
     .with_children(|parent| {
         parent
-            .spawn((Panel, PanelTitle("Kocag".into())))
+            .spawn((Panel, PanelTitle::new("Control Panel")))
             .with_children(|parent| {
-                parent.spawn((TextUI, TextUIContent("Control Panel".into())));
-                parent.spawn((DebugText::new(), TextUI, TextUIContent("Debug".into())));
-                parent.spawn(InputUI::from("1"));
+                parent.spawn(TextUI::new("Kocag"));
                 parent
-                    .spawn((Panel, PanelTitle("Kocag".into())))
+                    .spawn((Panel, PanelTitle::new("Debug"), DebugPanel::new()))
                     .with_children(|parent| {
-                        parent.spawn((TextUI, TextUIContent("Kocag".into())));
-                        parent.spawn(InputUI::from("2"));
+                        parent.spawn((DebugPanelText, TextUI::new("")));
+                    });
+                parent.spawn((InputUI, TextInputValue("1".into())));
+                parent
+                    .spawn((Panel, PanelTitle::new("Kocag")))
+                    .with_children(|parent| {
+                        parent.spawn(TextUI::new("Kocag"));
+                        parent.spawn((InputUI, TextInputValue("2".into())));
                     });
             });
     });
 }
 
 #[derive(Component)]
-#[require(PanelTitle, PanelMaxWidth)]
+#[require(Node, PanelTitle, PanelMaxWidth)]
 struct Panel;
 
 #[derive(Component, Default)]
 struct PanelTitle(String);
+
+impl PanelTitle {
+    pub fn new(title: impl Into<String>) -> Self {
+        Self(title.into())
+    }
+}
 
 #[derive(Component)]
 struct PanelMaxWidth(Val);
@@ -67,7 +85,7 @@ fn panel_setup(
 ) {
     for (entity, PanelTitle(title), PanelMaxWidth(width)) in added_panel.iter() {
         let title = cmd
-            .spawn((TextUI, TextUIContent(title.clone()), TextLayout {
+            .spawn((TextUI::new(title), TextLayout {
                 justify: JustifyText::Center,
                 ..default()
             }))
@@ -102,28 +120,28 @@ fn panel_setup(
 }
 
 #[derive(Component)]
-#[require(Node)]
-struct TextUI;
+#[require(Node, Text)]
+struct TextUI(String);
 
-#[derive(Component)]
-struct TextUIContent(String);
+impl TextUI {
+    pub fn new(content: impl Into<String>) -> Self {
+        Self(content.into())
+    }
+}
 
-fn text_ui_setup(mut cmd: Commands, added_text_ui: Query<(Entity, &TextUIContent), Added<TextUI>>) {
+fn text_ui_setup(mut cmd: Commands, added_text_ui: Query<(Entity, Ref<TextUI>), Added<TextUI>>) {
     for (entity, content) in added_text_ui.iter() {
-        cmd.entity(entity).insert((
-            Text::new(content.0.clone()),
-            TextFont::from_font_size(11.),
-            Node::default(),
-        ));
+        cmd.entity(entity)
+            .insert((Text::new(content.0.clone()), TextFont::from_font_size(11.)));
     }
 }
 
 #[derive(Component)]
 struct InputUI;
 
-impl InputUI {
-    fn from(initial_value: impl Into<String>) -> impl Bundle {
-        (
+fn input_ui_setup(mut cmd: Commands, added_input_ui: Query<Entity, Added<InputUI>>) {
+    for entity in added_input_ui.iter() {
+        cmd.entity(entity).insert((
             InputUI,
             Node {
                 border: UiRect::all(Val::Px(1.)),
@@ -133,23 +151,25 @@ impl InputUI {
             BackgroundColor(Color::srgb(0.3, 0.3, 0.3)),
             TextInput,
             TextInputTextFont(TextFont::from_font_size(11.)),
-            TextInputValue(initial_value.into()),
             TextInputSettings {
                 retain_on_submit: true,
                 ..Default::default()
             },
-        )
+        ));
     }
 }
 
 #[derive(Component)]
-pub struct DebugText {
+pub struct DebugPanel {
     content: Vec<String>,
     timer: Timer,
     ready_push: bool,
 }
 
-impl DebugText {
+#[derive(Component)]
+pub struct DebugPanelText;
+
+impl DebugPanel {
     pub fn new() -> Self {
         Self {
             content: vec![String::from(" "); 5],
@@ -181,12 +201,20 @@ impl DebugText {
     }
 }
 
-fn debug_text_system(mut debug_text: Query<(&mut Text, Mut<DebugText>)>, time: Res<Time>) {
-    for debug_text in debug_text.iter_mut() {
-        let (mut text, mut debug_text) = debug_text;
-        debug_text.tick(&time);
-        if debug_text.is_changed() {
-            text.0 = format!("Debug:\n{}", debug_text.get_content());
+fn debug_text_system(
+    time: Res<Time>,
+    mut debug_panel: Query<(Entity, Mut<DebugPanel>)>,
+    mut debug_text: Query<(Entity, &Parent, &mut Text), With<DebugPanelText>>,
+) {
+    for (panel_entt, mut debug_panel) in debug_panel.iter_mut() {
+        if debug_panel.is_changed() {
+            let mut debug_text = debug_text
+                .iter_mut()
+                .find(|(_, parent, _)| ***parent == panel_entt)
+                .unwrap()
+                .2;
+            debug_panel.tick(&time);
+            debug_text.0 = debug_panel.get_content();
         }
     }
 }
