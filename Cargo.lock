@@ -998,6 +998,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_simple_text_input"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b07acb8f19ebf40f56981dd400e18ab64da32b245c80655e336725e2c13368a3"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "bevy_sprite"
 version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3164,6 +3173,7 @@ name = "playground"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_simple_text_input",
  "fastrand",
  "serde",
  "toml",
@@ -3202,6 +3212,7 @@ name = "portal"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_simple_text_input",
  "fastrand",
  "serde",
  "toml",

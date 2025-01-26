@@ -1,11 +1,12 @@
 use bevy::{color::palettes::css::WHITE, prelude::*};
-// use bevy::sprite::{Wireframe2dConfig, Wireframe2dPlugin};
 use config::{Config, ConfigPlugin, RelPos};
+use ui::{DebugText, UIPlugin};
 
 const WINDOW_HEIGHT: f32 = 600.;
 const WINDOW_WIDTH: f32 = 900.;
 
 mod config;
+mod ui;
 
 fn main() {
     App::new()
@@ -22,22 +23,21 @@ fn main() {
                 }),
                 ..default()
             }),
-            // Wireframe2dPlugin,
+            UIPlugin,
             ConfigPlugin,
         ))
         .add_systems(Startup, setup)
         .add_systems(
             Update,
             (
-                //toggle_wireframe,
                 spawner,
                 move_spiral_to_center,
                 despawner,
-                trail_spawner,
                 trail_update,
                 close_on_q,
             ),
         )
+        .add_systems(FixedUpdate, trail_spawner)
         .run();
 }
 
@@ -53,14 +53,7 @@ struct ParticleMesh(Handle<Mesh>);
 #[derive(Component)]
 struct Trail;
 
-#[derive(Component)]
-struct DebugText;
-fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    // mut materials: ResMut<Assets<ColorMaterial>>,
-    config: Res<Config>,
-) {
+fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, config: Res<Config>) {
     commands.spawn(Camera2d);
     commands.insert_resource(ParticleSpawnTimer(Timer::from_seconds(
         config.particle.spawn_interval,
@@ -77,52 +70,13 @@ fn setup(
         RelPos::BottomLeft => (-WINDOW_WIDTH / 2., -WINDOW_HEIGHT / 2.),
         RelPos::Custom(x, y) => (x, y),
     };
-    commands
-        .spawn((
-            Portal,
-            Transform::from_xyz(portal_pos.0, portal_pos.1, 0.0),
-            Visibility::Visible,
-        ))
-        // .with_children(|parent| {
-            // for _ in 0..config.particle_count {
-            //     let angle = fastrand::f32() * std::f32::consts::PI * 2.0;
-            //     parent.spawn((
-            //         Particle,
-            //         Mesh2d(particle.clone()),
-            //         MeshMaterial2d(materials.add(Color::WHITE)),
-            //         Transform::from_xyz(
-            //             angle.cos() * config.portal_size,
-            //             angle.sin() * config.portal_size,
-            //             0.0,
-            //         ),
-            //     ));
-            // }
-        // })
-        ;
+    commands.spawn((
+        Portal,
+        Transform::from_xyz(portal_pos.0, portal_pos.1, 0.0),
+        Visibility::Visible,
+    ));
 
     commands.insert_resource(ParticleMesh(particle));
-
-    commands.spawn((
-        Text::new("Press space to toggle wireframes"),
-        TextFont::from_font_size(11.),
-        Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(12.0),
-            left: Val::Px(12.0),
-            ..default()
-        },
-    ));
-    commands.spawn((
-        DebugText,
-        Text::new("Debug"),
-        TextFont::from_font_size(11.),
-        Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(23.0),
-            left: Val::Px(12.0),
-            ..default()
-        },
-    ));
 }
 
 #[derive(Resource)]
@@ -134,6 +88,7 @@ struct TrailSpawnTimer(Timer);
 #[derive(Component)]
 struct TrailTimeout(Timer);
 
+#[allow(clippy::too_many_arguments)]
 fn spawner(
     mut cmd: Commands,
     time: Res<Time>,
@@ -142,6 +97,7 @@ fn spawner(
     mesh: Res<ParticleMesh>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     config: Res<Config>,
+    mut debug_text: Query<&mut DebugText>,
 ) {
     if timer.0.tick(time.delta()).just_finished() {
         let angle = fastrand::f32() * std::f32::consts::PI * 2.0;
@@ -160,6 +116,9 @@ fn spawner(
             ))
             .id();
         cmd.entity(portal.into_inner()).add_child(particle);
+        for mut debug_text in debug_text.iter_mut() {
+            debug_text.push_timed(format!("angle: {:.2}, distance: {:.2}", angle, distance));
+        }
     }
 }
 
@@ -235,15 +194,6 @@ fn trail_update(
         transform.scale = Vec3::splat(scale);
     }
 }
-
-// fn toggle_wireframe(
-//     mut wireframe_config: ResMut<Wireframe2dConfig>,
-//     keyboard: Res<ButtonInput<KeyCode>>,
-// ) {
-//     if keyboard.just_pressed(KeyCode::Space) {
-//         wireframe_config.global = !wireframe_config.global;
-//     }
-// }
 
 pub fn close_on_q(
     focused_windows: Query<(Entity, &Window)>,
