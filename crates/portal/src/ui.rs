@@ -11,11 +11,11 @@ impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(TextInputPlugin)
             .add_systems(Startup, build_ui)
-            .add_systems(Update, (debug_text_system, input_field_i32_system))
+            .add_systems(Update, (debug_panel_system, input_field_validation_system))
             .add_observer(create_panel)
             .add_observer(create_text_ui)
             .add_observer(create_input_ui)
-            .add_observer(create_input_field_i32);
+            .add_observer(create_input_field);
     }
 }
 
@@ -37,7 +37,11 @@ fn build_ui(mut cmd: Commands) {
             .spawn((Panel, PanelTitle::new("Control Panel")))
             .with_children(|parent| {
                 parent.spawn(TextUI::new("Kocag"));
-                parent.spawn(InputFieldI32UI);
+                parent.spawn((
+                    InputField,
+                    InputUInitialValue("1".into()),
+                    InputFieldType::F32,
+                ));
                 parent
                     .spawn((Panel, PanelTitle::new("Debug"), DebugPanel::new()))
                     .with_children(|parent| {
@@ -135,7 +139,7 @@ fn create_text_ui(trigger: Trigger<OnAdd, TextUI>, mut cmd: Commands, text_ui: Q
 #[derive(Component)]
 struct InputUI;
 
-#[derive(Component)]
+#[derive(Component, Default)]
 struct InputUInitialValue(String);
 
 fn create_input_ui(
@@ -165,29 +169,48 @@ fn create_input_ui(
 }
 
 #[derive(Component)]
-#[require(Node)]
-struct InputFieldI32UI;
+#[require(Node, InputUInitialValue)]
+struct InputField;
+
+#[allow(unused)]
+#[derive(Component)]
+enum InputFieldType {
+    String,
+    I32,
+    F32,
+}
 
 #[derive(Component)]
-struct InputFieldI32UIOldValue(String);
+struct InputFieldOldValue(String);
 
-fn create_input_field_i32(trigger: Trigger<OnAdd, InputFieldI32UI>, mut cmd: Commands) {
-    cmd.entity(trigger.entity()).insert((
-        InputUI,
-        InputUInitialValue("1".into()),
-        InputFieldI32UIOldValue("1".into()),
-    ));
+fn create_input_field(
+    trigger: Trigger<OnAdd, InputField>,
+    mut cmd: Commands,
+    init_value: Query<&InputUInitialValue>,
+) {
+    let init_value = init_value.get(trigger.entity()).unwrap();
+    cmd.entity(trigger.entity())
+        .insert((InputUI, InputFieldOldValue(init_value.0.clone())));
 }
 
 #[allow(clippy::type_complexity)]
-fn input_field_i32_system(
+fn input_field_validation_system(
     mut input_field: Query<
-        (Mut<TextInputValue>, &mut InputFieldI32UIOldValue),
-        (With<InputFieldI32UI>, Changed<TextInputValue>),
+        (
+            Mut<TextInputValue>,
+            &mut InputFieldOldValue,
+            &InputFieldType,
+        ),
+        (With<InputField>, Changed<TextInputValue>),
     >,
 ) {
-    for (mut value, mut old) in input_field.iter_mut() {
-        if value.0.parse::<i32>().is_ok() || value.0.is_empty() {
+    for (mut value, mut old, input_type) in input_field.iter_mut() {
+        if match input_type {
+            InputFieldType::String => true,
+            InputFieldType::I32 => value.0.parse::<i32>().is_ok(),
+            InputFieldType::F32 => value.0.parse::<f32>().is_ok(),
+        } || value.0.is_empty()
+        {
             old.0 = value.0.clone();
         } else {
             value.0 = old.0.clone();
@@ -209,7 +232,7 @@ impl DebugPanel {
     pub fn new() -> Self {
         Self {
             content: vec![String::from(" "); 5],
-            timer: Timer::new(Duration::from_secs_f32(0.1), TimerMode::Repeating),
+            timer: Timer::new(Duration::from_secs_f32(0.3), TimerMode::Repeating),
             ready_push: false,
         }
     }
@@ -237,20 +260,13 @@ impl DebugPanel {
     }
 }
 
-fn debug_text_system(
+fn debug_panel_system(
     time: Res<Time>,
-    mut debug_panel: Query<(Entity, Mut<DebugPanel>)>,
-    mut debug_text: Query<(Entity, &Parent, &mut Text), With<DebugPanelText>>,
+    mut debug_panel: Single<Mut<DebugPanel>>,
+    mut debug_text: Single<&mut Text, With<DebugPanelText>>,
 ) {
-    for (panel_entt, mut debug_panel) in debug_panel.iter_mut() {
-        if debug_panel.is_changed() {
-            let mut debug_text = debug_text
-                .iter_mut()
-                .find(|(_, parent, _)| ***parent == panel_entt)
-                .unwrap()
-                .2;
-            debug_panel.tick(&time);
-            debug_text.0 = debug_panel.get_content();
-        }
+    debug_panel.tick(&time);
+    if debug_panel.is_changed() {
+        debug_text.0 = debug_panel.get_content();
     }
 }
