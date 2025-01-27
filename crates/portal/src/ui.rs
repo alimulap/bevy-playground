@@ -2,7 +2,8 @@ use std::time::Duration;
 
 use bevy::{color::palettes::css::WHITE, ecs::observer::TriggerTargets, prelude::*};
 use bevy_simple_text_input::{
-    TextInput, TextInputPlugin, TextInputSettings, TextInputTextFont, TextInputValue,
+    TextInput, TextInputInactive, TextInputPlugin, TextInputSettings, TextInputSystem,
+    TextInputTextFont, TextInputValue,
 };
 
 pub struct UIPlugin;
@@ -11,7 +12,14 @@ impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(TextInputPlugin)
             .add_systems(Startup, build_ui)
-            .add_systems(Update, (debug_panel_system, input_field_validation_system))
+            .add_systems(
+                Update,
+                (
+                    debug_panel_system,
+                    input_field_validation_system,
+                    focus.before(TextInputSystem),
+                ),
+            )
             .add_observer(create_panel)
             .add_observer(create_text_ui)
             .add_observer(create_input_ui)
@@ -169,9 +177,28 @@ fn create_input_ui(
             retain_on_submit: true,
             ..Default::default()
         },
-        // TextInputInactive(false),
+        TextInputInactive(true),
         // FocusPolicy::Block,
     ));
+}
+
+fn focus(
+    query: Query<(Entity, &Interaction), Changed<Interaction>>,
+    mut text_input_query: Query<(Entity, &mut TextInputInactive, &mut BackgroundColor)>,
+) {
+    for (interaction_entity, interaction) in &query {
+        if *interaction == Interaction::Pressed {
+            for (entity, mut inactive, mut background_color) in &mut text_input_query {
+                if entity == interaction_entity {
+                    inactive.0 = false;
+                    *background_color = BackgroundColor(Color::srgb(0.4, 0.4, 0.4));
+                } else {
+                    inactive.0 = true;
+                    *background_color = BackgroundColor(Color::srgb(0.3, 0.3, 0.3));
+                }
+            }
+        }
+    }
 }
 
 #[derive(Component)]
