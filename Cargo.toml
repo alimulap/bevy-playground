@@ -8,7 +8,7 @@ bevy = "0.15.0"
 fastrand = "2.3.0"
 serde = { version = "1.0.217", features = ["derive"] }
 toml = "0.8.19"
-bevy_simple_text_input = "0.10.2"
+bevy_simple_text_input = { git = "https://github.com/alimulap/bevy_simple_text_input" }
 
 [workspace]
 members = [
@@ -20,7 +20,7 @@ bevy = "0.15.0"
 serde = { version = "1.0.217", features = ["derive"] }
 toml = "0.8.19"
 fastrand = "2.3.0"
-bevy_simple_text_input = "0.10.2"
+bevy_simple_text_input = { git = "https://github.com/alimulap/bevy_simple_text_input" }
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]

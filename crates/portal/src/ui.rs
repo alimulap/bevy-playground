@@ -1,9 +1,9 @@
 use std::time::Duration;
 
-use bevy::{color::palettes::css::WHITE, ecs::observer::TriggerTargets, prelude::*};
+use bevy::prelude::*;
 use bevy_simple_text_input::{
     TextInput, TextInputInactive, TextInputPlugin, TextInputSettings, TextInputSystem,
-    TextInputTextFont, TextInputValue,
+    TextInputTextFont, TextInputValidation, TextInputValue,
 };
 
 pub struct UIPlugin;
@@ -16,7 +16,7 @@ impl Plugin for UIPlugin {
                 Update,
                 (
                     debug_panel_system,
-                    input_field_validation_system,
+                    // input_field_validation_system,
                     focus.before(TextInputSystem),
                 ),
             )
@@ -37,7 +37,7 @@ fn build_ui(mut cmd: Commands) {
             padding: UiRect::all(Val::Px(7.)),
             ..default()
         },
-        BorderColor(WHITE.into()),
+        BorderColor(Color::WHITE),
         Interaction::None,
     ))
     .with_children(|parent| {
@@ -215,18 +215,17 @@ enum InputFieldType {
 
 type InputFieldLabel = TextUI;
 
-#[derive(Component)]
-struct InputFieldOldValue(String);
-
 fn create_input_field(
     trigger: Trigger<OnAdd, InputField>,
     mut cmd: Commands,
     init_value: Query<&InputUInitialValue>,
     label: Query<&InputFieldLabel>,
+    input_type: Query<&InputFieldType>,
 ) {
     let init_value = init_value.get(trigger.entity()).unwrap();
     cmd.entity(trigger.entity()).remove::<InputUInitialValue>();
     let label = label.get(trigger.entity()).unwrap();
+    let input_type = input_type.get(trigger.entity()).unwrap();
     cmd.entity(trigger.entity())
         .insert((Node {
             flex_direction: FlexDirection::Row,
@@ -237,35 +236,43 @@ fn create_input_field(
                 margin: UiRect::right(Val::Px(3.)),
                 ..default()
             }));
-            parent.spawn((
-                InputUI,
-                init_value.clone(),
-                InputFieldOldValue(init_value.0.clone()),
-            ));
+            parent.spawn((InputUI, init_value.clone(), match input_type {
+                InputFieldType::String => TextInputValidation(Box::new(|_, _, _| true)),
+                InputFieldType::I32 => TextInputValidation(Box::new(|text, i, str| {
+                    let mut text = text.clone();
+                    text.insert_str(i, str);
+                    text.parse::<i32>().is_ok()
+                })),
+                InputFieldType::F32 => TextInputValidation(Box::new(|text, i, str| {
+                    let mut text = text.clone();
+                    text.insert_str(i, str);
+                    text.parse::<f32>().is_ok()
+                })),
+            }));
         });
 }
 
-fn input_field_validation_system(
-    mut input_field: Query<
-        (&Parent, Mut<TextInputValue>, &mut InputFieldOldValue),
-        Changed<TextInputValue>,
-    >,
-    input_type: Query<&InputFieldType>,
-) {
-    for (parent, mut value, mut old) in input_field.iter_mut() {
-        let input_type = input_type.get(parent.entities()[0]).unwrap();
-        if match input_type {
-            InputFieldType::String => true,
-            InputFieldType::I32 => value.0.parse::<i32>().is_ok(),
-            InputFieldType::F32 => value.0.parse::<f32>().is_ok(),
-        } || value.0.is_empty()
-        {
-            old.0 = value.0.clone();
-        } else {
-            value.0 = old.0.clone();
-        }
-    }
-}
+// fn input_field_validation_system(
+//     mut input_field: Query<
+//         (&Parent, Mut<TextInputValue>, &mut InputFieldOldValue),
+//         Changed<TextInputValue>,
+//     >,
+//     input_type: Query<&InputFieldType>,
+// ) {
+//     for (parent, mut value, mut old) in input_field.iter_mut() {
+//         let input_type = input_type.get(parent.entities()[0]).unwrap();
+//         if match input_type {
+//             InputFieldType::String => true,
+//             InputFieldType::I32 => value.0.parse::<i32>().is_ok(),
+//             InputFieldType::F32 => value.0.parse::<f32>().is_ok(),
+//         } || value.0.is_empty()
+//         {
+//             old.0 = value.0.clone();
+//         } else {
+//             value.0 = old.0.clone();
+//         }
+//     }
+// }
 
 #[derive(Component)]
 pub struct DebugPanel {
