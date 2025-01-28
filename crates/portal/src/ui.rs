@@ -22,6 +22,7 @@ impl Plugin for UIPlugin {
             )
             .add_observer(create_panel)
             .add_observer(create_text_ui)
+            .add_observer(create_header)
             .add_observer(create_input_ui)
             .add_observer(create_input_field);
     }
@@ -44,7 +45,7 @@ fn build_ui(mut cmd: Commands) {
         parent
             .spawn((Panel, PanelTitle::new("Control Panel")))
             .with_children(|parent| {
-                parent.spawn(TextUI::new("Portal"));
+                parent.spawn(Header::new("Portal"));
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("size"),
@@ -57,7 +58,7 @@ fn build_ui(mut cmd: Commands) {
                     InputUInitialValue("1".into()),
                     InputFieldType::F32,
                 ));
-                parent.spawn(TextUI::new("Particle"));
+                parent.spawn(Header::new("Particle"));
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("size"),
@@ -82,7 +83,7 @@ fn build_ui(mut cmd: Commands) {
                     InputUInitialValue("1".into()),
                     InputFieldType::F32,
                 ));
-                parent.spawn(TextUI::new("Particle Trail"));
+                parent.spawn(Header::new("Particle Trail"));
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("spawn interval"),
@@ -179,6 +180,24 @@ fn create_text_ui(trigger: Trigger<OnAdd, TextUI>, mut cmd: Commands, text_ui: Q
     let TextUI(content) = text_ui.get(trigger.entity()).unwrap();
     cmd.entity(trigger.entity())
         .insert((Text::new(content.clone()), TextFont::from_font_size(11.)));
+}
+
+#[derive(Component)]
+#[require(Node)]
+struct Header(String);
+
+impl Header {
+    pub fn new(content: impl Into<String>) -> Self {
+        Self(content.into())
+    }
+}
+
+fn create_header(trigger: Trigger<OnAdd, Header>, mut cmd: Commands, header: Query<&Header>) {
+    let header = header.get(trigger.entity()).unwrap();
+    cmd.entity(trigger.entity()).insert((
+        TextUI(format!("=== {} ===", header.0)),
+        TextLayout::new_with_justify(JustifyText::Center),
+    ));
 }
 
 #[derive(Component)]
