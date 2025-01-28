@@ -6,6 +6,8 @@ use bevy_simple_text_input::{
     TextInputTextFont, TextInputValidation, TextInputValue,
 };
 
+use crate::config::Config;
+
 pub struct UIPlugin;
 
 impl Plugin for UIPlugin {
@@ -28,7 +30,7 @@ impl Plugin for UIPlugin {
     }
 }
 
-fn build_ui(mut cmd: Commands) {
+fn build_ui(mut cmd: Commands, config: Res<Config>) {
     cmd.spawn((
         Node {
             flex_direction: FlexDirection::Column,
@@ -49,51 +51,51 @@ fn build_ui(mut cmd: Commands) {
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("size"),
-                    InputUInitialValue("1".into()),
+                    InputUInitialValue(config.portal.size.to_string()),
                     InputFieldType::F32,
                 ));
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("edge offset"),
-                    InputUInitialValue("1".into()),
+                    InputUInitialValue(config.portal.edge_offset.to_string()),
                     InputFieldType::F32,
                 ));
                 parent.spawn(Header::new("Particle"));
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("size"),
-                    InputUInitialValue("1".into()),
+                    InputUInitialValue(config.particle.size.to_string()),
                     InputFieldType::F32,
                 ));
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("spawn interval"),
-                    InputUInitialValue("1".into()),
+                    InputUInitialValue(config.particle.spawn_interval.to_string()),
                     InputFieldType::F32,
                 ));
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("move speed"),
-                    InputUInitialValue("1".into()),
+                    InputUInitialValue(config.particle.move_speed.to_string()),
                     InputFieldType::F32,
                 ));
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("spiral angle"),
-                    InputUInitialValue("1".into()),
+                    InputUInitialValue(config.particle.spiral_offset_angle.to_string()),
                     InputFieldType::F32,
                 ));
                 parent.spawn(Header::new("Particle Trail"));
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("spawn interval"),
-                    InputUInitialValue("1".into()),
+                    InputUInitialValue(config.particle.trail.spawn_interval.to_string()),
                     InputFieldType::F32,
                 ));
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("timeout"),
-                    InputUInitialValue("1".into()),
+                    InputUInitialValue(config.particle.trail.timeout.to_string()),
                     InputFieldType::F32,
                 ));
                 parent
@@ -101,7 +103,6 @@ fn build_ui(mut cmd: Commands) {
                     .with_children(|parent| {
                         parent.spawn((DebugPanelText, TextUI::new("")));
                     });
-                parent.spawn((InputUI, InputUInitialValue("1".into())));
             });
     });
 }
@@ -222,6 +223,7 @@ fn create_input_ui(
             width: *width,
             max_width: *width,
             border: UiRect::all(Val::Px(1.)),
+            padding: UiRect::left(Val::Px(3.)),
             ..default()
         },
         BorderColor(Color::WHITE),

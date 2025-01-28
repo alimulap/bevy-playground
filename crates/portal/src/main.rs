@@ -23,8 +23,8 @@ fn main() {
                 }),
                 ..default()
             }),
-            UIPlugin,
             ConfigPlugin,
+            UIPlugin,
         ))
         .add_systems(Startup, setup)
         .add_systems(
