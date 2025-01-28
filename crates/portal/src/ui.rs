@@ -286,6 +286,7 @@ fn create_input_field(
     cmd.entity(trigger.entity())
         .insert((Node {
             flex_direction: FlexDirection::Row,
+            justify_content: JustifyContent::SpaceBetween,
             ..default()
         },))
         .with_children(|parent| {
