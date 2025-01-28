@@ -44,10 +44,54 @@ fn build_ui(mut cmd: Commands) {
         parent
             .spawn((Panel, PanelTitle::new("Control Panel")))
             .with_children(|parent| {
-                parent.spawn(TextUI::new("Kocag"));
+                parent.spawn(TextUI::new("Portal"));
                 parent.spawn((
                     InputField,
-                    InputFieldLabel::new("Kocag"),
+                    InputFieldLabel::new("size"),
+                    InputUInitialValue("1".into()),
+                    InputFieldType::F32,
+                ));
+                parent.spawn((
+                    InputField,
+                    InputFieldLabel::new("edge offset"),
+                    InputUInitialValue("1".into()),
+                    InputFieldType::F32,
+                ));
+                parent.spawn(TextUI::new("Particle"));
+                parent.spawn((
+                    InputField,
+                    InputFieldLabel::new("size"),
+                    InputUInitialValue("1".into()),
+                    InputFieldType::F32,
+                ));
+                parent.spawn((
+                    InputField,
+                    InputFieldLabel::new("spawn interval"),
+                    InputUInitialValue("1".into()),
+                    InputFieldType::F32,
+                ));
+                parent.spawn((
+                    InputField,
+                    InputFieldLabel::new("move speed"),
+                    InputUInitialValue("1".into()),
+                    InputFieldType::F32,
+                ));
+                parent.spawn((
+                    InputField,
+                    InputFieldLabel::new("spiral angle"),
+                    InputUInitialValue("1".into()),
+                    InputFieldType::F32,
+                ));
+                parent.spawn(TextUI::new("Particle Trail"));
+                parent.spawn((
+                    InputField,
+                    InputFieldLabel::new("spawn interval"),
+                    InputUInitialValue("1".into()),
+                    InputFieldType::F32,
+                ));
+                parent.spawn((
+                    InputField,
+                    InputFieldLabel::new("timeout"),
                     InputUInitialValue("1".into()),
                     InputFieldType::F32,
                 ));
@@ -57,12 +101,6 @@ fn build_ui(mut cmd: Commands) {
                         parent.spawn((DebugPanelText, TextUI::new("")));
                     });
                 parent.spawn((InputUI, InputUInitialValue("1".into())));
-                parent
-                    .spawn((Panel, PanelTitle::new("Kocag")))
-                    .with_children(|parent| {
-                        parent.spawn(TextUI::new("Kocag"));
-                        parent.spawn((InputUI, InputUInitialValue("2".into())));
-                    });
             });
     });
 }
@@ -251,28 +289,6 @@ fn create_input_field(
             }));
         });
 }
-
-// fn input_field_validation_system(
-//     mut input_field: Query<
-//         (&Parent, Mut<TextInputValue>, &mut InputFieldOldValue),
-//         Changed<TextInputValue>,
-//     >,
-//     input_type: Query<&InputFieldType>,
-// ) {
-//     for (parent, mut value, mut old) in input_field.iter_mut() {
-//         let input_type = input_type.get(parent.entities()[0]).unwrap();
-//         if match input_type {
-//             InputFieldType::String => true,
-//             InputFieldType::I32 => value.0.parse::<i32>().is_ok(),
-//             InputFieldType::F32 => value.0.parse::<f32>().is_ok(),
-//         } || value.0.is_empty()
-//         {
-//             old.0 = value.0.clone();
-//         } else {
-//             value.0 = old.0.clone();
-//         }
-//     }
-// }
 
 #[derive(Component)]
 pub struct DebugPanel {
