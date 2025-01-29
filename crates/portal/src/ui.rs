@@ -13,6 +13,7 @@ pub struct UIPlugin;
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(InputUIFocused(None))
+            .insert_resource(DebugLog::new())
             .add_event::<InputUISubmitEvent>()
             .add_plugins(TextInputPlugin)
             .add_systems(Startup, build_ui)
@@ -119,7 +120,7 @@ fn build_ui(mut cmd: Commands, config: Res<Config>) {
                     Name::new("particle:trail:timeout"),
                 ));
                 parent
-                    .spawn((Panel, PanelTitle::new("Debug"), DebugPanel::new()))
+                    .spawn((Panel, PanelTitle::new("Debug")))
                     .with_children(|parent| {
                         parent.spawn((DebugPanelText, TextUI::new("")));
                     });
@@ -432,8 +433,8 @@ fn create_input_field(
         });
 }
 
-#[derive(Component)]
-pub struct DebugPanel {
+#[derive(Resource)]
+pub struct DebugLog {
     content: Vec<String>,
     timer: Timer,
     ready_push: bool,
@@ -442,7 +443,7 @@ pub struct DebugPanel {
 #[derive(Component)]
 pub struct DebugPanelText;
 
-impl DebugPanel {
+impl DebugLog {
     pub fn new() -> Self {
         Self {
             content: vec![String::from(" "); 5],
@@ -476,11 +477,11 @@ impl DebugPanel {
 
 fn debug_panel_system(
     time: Res<Time>,
-    mut debug_panel: Single<Mut<DebugPanel>>,
+    mut debug_log: ResMut<DebugLog>,
     mut debug_text: Single<&mut Text, With<DebugPanelText>>,
 ) {
-    debug_panel.tick(&time);
-    if debug_panel.is_changed() {
-        debug_text.0 = debug_panel.get_content();
+    debug_log.tick(&time);
+    if debug_log.is_changed() {
+        debug_text.0 = debug_log.get_content();
     }
 }

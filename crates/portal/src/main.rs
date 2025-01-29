@@ -1,6 +1,6 @@
 use bevy::{color::palettes::css::WHITE, prelude::*};
 use config::{Config, ConfigPlugin, RelPos};
-use ui::{DebugPanel, UIPlugin};
+use ui::{DebugLog, UIPlugin};
 
 pub const WINDOW_HEIGHT: f32 = 600.;
 pub const WINDOW_WIDTH: f32 = 900.;
@@ -97,7 +97,7 @@ fn spawner(
     mesh: Res<ParticleMesh>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     config: Res<Config>,
-    mut debug_text: Query<&mut DebugPanel>,
+    mut debug_log: ResMut<DebugLog>,
 ) {
     if timer.0.tick(time.delta()).just_finished() {
         let angle = fastrand::f32() * std::f32::consts::PI * 2.0;
@@ -116,9 +116,7 @@ fn spawner(
             ))
             .id();
         cmd.entity(portal.into_inner()).add_child(particle);
-        for mut debug_text in debug_text.iter_mut() {
-            debug_text.push_timed(format!("angle: {:.2}, distance: {:.2}", angle, distance));
-        }
+        debug_log.push_timed(format!("angle: {:.2}, distance: {:.2}", angle, distance));
     }
 }
 
