@@ -12,13 +12,15 @@ pub struct UIPlugin;
 
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(TextInputPlugin)
+        app.insert_resource(InputUIFocused(None))
+            .add_event::<InputUISubmitEvent>()
+            .add_plugins(TextInputPlugin)
             .add_systems(Startup, build_ui)
             .add_systems(
                 Update,
                 (
+                    keyboard_handler,
                     debug_panel_system,
-                    // input_field_validation_system,
                     focus.before(TextInputSystem),
                 ),
             )
@@ -26,7 +28,9 @@ impl Plugin for UIPlugin {
             .add_observer(create_text_ui)
             .add_observer(create_header)
             .add_observer(create_input_ui)
-            .add_observer(create_input_field);
+            .add_observer(submit_unfocus)
+            .add_observer(create_input_field)
+            .add_observer(control_panel_system);
     }
 }
 
@@ -53,12 +57,14 @@ fn build_ui(mut cmd: Commands, config: Res<Config>) {
                     InputFieldLabel::new("size"),
                     InputUInitialValue(config.portal.size.to_string()),
                     InputFieldType::F32,
+                    Name::new("portal:size"),
                 ));
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("edge offset"),
                     InputUInitialValue(config.portal.edge_offset.to_string()),
                     InputFieldType::F32,
+                    Name::new("portal:edge_offset"),
                 ));
                 parent.spawn(Header::new("Particle"));
                 parent.spawn((
@@ -66,24 +72,28 @@ fn build_ui(mut cmd: Commands, config: Res<Config>) {
                     InputFieldLabel::new("size"),
                     InputUInitialValue(config.particle.size.to_string()),
                     InputFieldType::F32,
+                    Name::new("particle:size"),
                 ));
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("spawn interval"),
                     InputUInitialValue(config.particle.spawn_interval.to_string()),
                     InputFieldType::F32,
+                    Name::new("particle:spawn_interval"),
                 ));
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("move speed"),
                     InputUInitialValue(config.particle.move_speed.to_string()),
                     InputFieldType::F32,
+                    Name::new("particle:move_speed"),
                 ));
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("spiral angle"),
                     InputUInitialValue(config.particle.spiral_offset_angle.to_string()),
                     InputFieldType::F32,
+                    Name::new("particle:spiral_offset_angle"),
                 ));
                 parent.spawn(Header::new("Particle Trail"));
                 parent.spawn((
@@ -91,12 +101,14 @@ fn build_ui(mut cmd: Commands, config: Res<Config>) {
                     InputFieldLabel::new("spawn interval"),
                     InputUInitialValue(config.particle.trail.spawn_interval.to_string()),
                     InputFieldType::F32,
+                    Name::new("particle:trail:spawn_interval"),
                 ));
                 parent.spawn((
                     InputField,
                     InputFieldLabel::new("timeout"),
                     InputUInitialValue(config.particle.trail.timeout.to_string()),
                     InputFieldType::F32,
+                    Name::new("particle:trail:timeout"),
                 ));
                 parent
                     .spawn((Panel, PanelTitle::new("Debug"), DebugPanel::new()))
@@ -105,6 +117,63 @@ fn build_ui(mut cmd: Commands, config: Res<Config>) {
                     });
             });
     });
+}
+
+fn control_panel_system(
+    trigger: Trigger<InputUISubmitEvent>,
+    input: Query<(&TextInputValue, &Name)>,
+    mut config: ResMut<Config>,
+) {
+    let (value, name) = input.get(trigger.entity()).unwrap();
+    if name.eq(&Name::new("portal:size")) {
+        if let Ok(size) = value.0.parse::<f32>() {
+            config.portal.size = size;
+        }
+    } else if name.eq(&Name::new("portal:edge_offset")) {
+        if let Ok(edge_offset) = value.0.parse::<f32>() {
+            config.portal.edge_offset = edge_offset;
+        }
+    } else if name.eq(&Name::new("particle:size")) {
+        if let Ok(size) = value.0.parse::<u32>() {
+            config.particle.size = size;
+        }
+    } else if name.eq(&Name::new("particle:spawn_interval")) {
+        if let Ok(spawn_interval) = value.0.parse::<f32>() {
+            config.particle.spawn_interval = spawn_interval;
+        }
+    } else if name.eq(&Name::new("particle:move_speed")) {
+        if let Ok(move_speed) = value.0.parse::<f32>() {
+            config.particle.move_speed = move_speed;
+        }
+    } else if name.eq(&Name::new("particle:spiral_offset_angle")) {
+        if let Ok(spiral_offset_angle) = value.0.parse::<f32>() {
+            config.particle.spiral_offset_angle = spiral_offset_angle;
+        }
+    } else if name.eq(&Name::new("particle:trail:spawn_interval")) {
+        if let Ok(spawn_interval) = value.0.parse::<f32>() {
+            config.particle.trail.spawn_interval = spawn_interval;
+        }
+    } else if name.eq(&Name::new("particle:trail:timeout")) {
+        if let Ok(timeout) = value.0.parse::<f32>() {
+            config.particle.trail.timeout = timeout;
+        }
+    }
+}
+
+#[derive(Event)]
+struct InputUISubmitEvent;
+
+#[derive(Resource)]
+struct InputUIFocused(Option<Entity>);
+
+fn keyboard_handler(
+    mut cmd: Commands,
+    key_input: Res<ButtonInput<KeyCode>>,
+    focused: Res<InputUIFocused>,
+) {
+    if key_input.just_pressed(KeyCode::Enter) {
+        cmd.trigger_targets(InputUISubmitEvent, focused.0.unwrap());
+    }
 }
 
 #[derive(Component)]
@@ -244,6 +313,7 @@ fn create_input_ui(
 fn focus(
     query: Query<(Entity, &Interaction), Changed<Interaction>>,
     mut text_input_query: Query<(Entity, &mut TextInputInactive, &mut BackgroundColor)>,
+    mut focused: ResMut<InputUIFocused>,
 ) {
     for (interaction_entity, interaction) in &query {
         if *interaction == Interaction::Pressed {
@@ -251,12 +321,25 @@ fn focus(
                 if entity == interaction_entity {
                     inactive.0 = false;
                     *background_color = BackgroundColor(Color::srgb(0.4, 0.4, 0.4));
-                } else {
+                    focused.0 = Some(entity);
+                } else if !inactive.0 {
                     inactive.0 = true;
                     *background_color = BackgroundColor(Color::srgb(0.3, 0.3, 0.3));
                 }
             }
         }
+    }
+}
+
+fn submit_unfocus(
+    trigger: Trigger<InputUISubmitEvent>,
+    mut input_ui: Query<(&mut TextInputInactive, &mut BackgroundColor)>,
+    mut focused: ResMut<InputUIFocused>,
+) {
+    if let Ok((mut inactive, mut background_color)) = input_ui.get_mut(trigger.entity()) {
+        focused.0 = None;
+        inactive.0 = true;
+        *background_color = BackgroundColor(Color::srgb(0.3, 0.3, 0.3));
     }
 }
 
@@ -280,11 +363,13 @@ fn create_input_field(
     init_value: Query<&InputUInitialValue>,
     label: Query<&InputFieldLabel>,
     input_type: Query<&InputFieldType>,
+    name: Query<&Name>,
 ) {
     let init_value = init_value.get(trigger.entity()).unwrap();
     cmd.entity(trigger.entity()).remove::<InputUInitialValue>();
     let label = label.get(trigger.entity()).unwrap();
     let input_type = input_type.get(trigger.entity()).unwrap();
+    let name = name.get(trigger.entity()).unwrap();
     cmd.entity(trigger.entity())
         .insert((Node {
             flex_direction: FlexDirection::Row,
@@ -296,19 +381,24 @@ fn create_input_field(
                 margin: UiRect::right(Val::Px(3.)),
                 ..default()
             }));
-            parent.spawn((InputUI, init_value.clone(), match input_type {
-                InputFieldType::String => TextInputValidation(Box::new(|_, _, _| true)),
-                InputFieldType::I32 => TextInputValidation(Box::new(|text, i, str| {
-                    let mut text = text.clone();
-                    text.insert_str(i, str);
-                    text.parse::<i32>().is_ok()
-                })),
-                InputFieldType::F32 => TextInputValidation(Box::new(|text, i, str| {
-                    let mut text = text.clone();
-                    text.insert_str(i, str);
-                    text.parse::<f32>().is_ok()
-                })),
-            }));
+            parent.spawn((
+                InputUI,
+                name.clone(),
+                init_value.clone(),
+                match input_type {
+                    InputFieldType::String => TextInputValidation(Box::new(|_, _, _| true)),
+                    InputFieldType::I32 => TextInputValidation(Box::new(|text, i, str| {
+                        let mut text = text.clone();
+                        text.insert_str(i, str);
+                        text.parse::<i32>().is_ok()
+                    })),
+                    InputFieldType::F32 => TextInputValidation(Box::new(|text, i, str| {
+                        let mut text = text.clone();
+                        text.insert_str(i, str);
+                        text.parse::<f32>().is_ok()
+                    })),
+                },
+            ));
         });
 }
 
