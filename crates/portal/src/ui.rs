@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 
 use bevy::prelude::*;
 use bevy_simple_text_input::{
@@ -6,7 +6,7 @@ use bevy_simple_text_input::{
     TextInputTextFont, TextInputValidation, TextInputValue,
 };
 
-use crate::config::Config;
+use crate::config::{Config, ConfigChanged, RelPos};
 
 pub struct UIPlugin;
 
@@ -58,6 +58,14 @@ fn build_ui(mut cmd: Commands, config: Res<Config>) {
                     InputUInitialValue(config.portal.size.to_string()),
                     InputFieldType::F32,
                     Name::new("portal:size"),
+                ));
+                parent.spawn((
+                    InputField,
+                    InputFieldLabel::new("position"),
+                    InputUInitialValue(config.portal.pos.to_string()),
+                    InputFieldType::String,
+                    MaxWidth(Val::Px(85.)),
+                    Name::new("portal:pos"),
                 ));
                 parent.spawn((
                     InputField,
@@ -121,41 +129,58 @@ fn build_ui(mut cmd: Commands, config: Res<Config>) {
 
 fn control_panel_system(
     trigger: Trigger<InputUISubmitEvent>,
-    input: Query<(&TextInputValue, &Name)>,
+    mut cmd: Commands,
+    mut input: Query<(&mut TextInputValue, &Name)>,
     mut config: ResMut<Config>,
 ) {
-    let (value, name) = input.get(trigger.entity()).unwrap();
+    let (mut value, name) = input.get_mut(trigger.entity()).unwrap();
     if name.eq(&Name::new("portal:size")) {
         if let Ok(size) = value.0.parse::<f32>() {
             config.portal.size = size;
+            cmd.trigger(ConfigChanged::PortalSize);
+        }
+    } else if name.eq(&Name::new("portal:pos")) {
+        if let Ok(pos) = RelPos::from_str(&value.0) {
+            config.portal.pos = pos;
+            cmd.trigger(ConfigChanged::PortalPos);
+        } else {
+            warn!("Invalid portal position");
+            value.0 = config.portal.pos.to_string();
         }
     } else if name.eq(&Name::new("portal:edge_offset")) {
         if let Ok(edge_offset) = value.0.parse::<f32>() {
             config.portal.edge_offset = edge_offset;
+            cmd.trigger(ConfigChanged::PortalEdgeOffset);
         }
     } else if name.eq(&Name::new("particle:size")) {
         if let Ok(size) = value.0.parse::<u32>() {
             config.particle.size = size;
+            cmd.trigger(ConfigChanged::ParticleSize);
         }
     } else if name.eq(&Name::new("particle:spawn_interval")) {
         if let Ok(spawn_interval) = value.0.parse::<f32>() {
             config.particle.spawn_interval = spawn_interval;
+            cmd.trigger(ConfigChanged::ParticleSpawnInterval);
         }
     } else if name.eq(&Name::new("particle:move_speed")) {
         if let Ok(move_speed) = value.0.parse::<f32>() {
             config.particle.move_speed = move_speed;
+            cmd.trigger(ConfigChanged::ParticleMoveSpeed);
         }
     } else if name.eq(&Name::new("particle:spiral_offset_angle")) {
         if let Ok(spiral_offset_angle) = value.0.parse::<f32>() {
             config.particle.spiral_offset_angle = spiral_offset_angle;
+            cmd.trigger(ConfigChanged::ParticleSpiralOffsetAngle);
         }
     } else if name.eq(&Name::new("particle:trail:spawn_interval")) {
         if let Ok(spawn_interval) = value.0.parse::<f32>() {
             config.particle.trail.spawn_interval = spawn_interval;
+            cmd.trigger(ConfigChanged::ParticleTrailSpawnInterval);
         }
     } else if name.eq(&Name::new("particle:trail:timeout")) {
         if let Ok(timeout) = value.0.parse::<f32>() {
             config.particle.trail.timeout = timeout;
+            cmd.trigger(ConfigChanged::ParticleTrailTimeout);
         }
     }
 }
@@ -189,7 +214,7 @@ impl PanelTitle {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 struct MaxWidth(Val);
 
 fn create_panel(
@@ -364,12 +389,16 @@ fn create_input_field(
     label: Query<&InputFieldLabel>,
     input_type: Query<&InputFieldType>,
     name: Query<&Name>,
+    width: Query<&MaxWidth>,
 ) {
     let init_value = init_value.get(trigger.entity()).unwrap();
     cmd.entity(trigger.entity()).remove::<InputUInitialValue>();
     let label = label.get(trigger.entity()).unwrap();
     let input_type = input_type.get(trigger.entity()).unwrap();
     let name = name.get(trigger.entity()).unwrap();
+    let max_width = width
+        .get(trigger.entity())
+        .unwrap_or(&MaxWidth(Val::Px(45.)));
     cmd.entity(trigger.entity())
         .insert((Node {
             flex_direction: FlexDirection::Row,
@@ -385,6 +414,7 @@ fn create_input_field(
                 InputUI,
                 name.clone(),
                 init_value.clone(),
+                max_width.clone(),
                 match input_type {
                     InputFieldType::String => TextInputValidation(Box::new(|_, _, _| true)),
                     InputFieldType::I32 => TextInputValidation(Box::new(|text, i, str| {

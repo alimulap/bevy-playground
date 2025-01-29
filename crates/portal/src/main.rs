@@ -2,8 +2,8 @@ use bevy::{color::palettes::css::WHITE, prelude::*};
 use config::{Config, ConfigPlugin, RelPos};
 use ui::{DebugPanel, UIPlugin};
 
-const WINDOW_HEIGHT: f32 = 600.;
-const WINDOW_WIDTH: f32 = 900.;
+pub const WINDOW_HEIGHT: f32 = 600.;
+pub const WINDOW_WIDTH: f32 = 900.;
 
 mod config;
 mod ui;
@@ -48,7 +48,7 @@ struct Portal;
 struct Particle;
 
 #[derive(Resource)]
-struct ParticleMesh(Handle<Mesh>);
+pub struct ParticleMesh(Handle<Mesh>);
 
 #[derive(Component)]
 struct Trail;
@@ -80,7 +80,7 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, config: Res<C
 }
 
 #[derive(Resource)]
-struct ParticleSpawnTimer(Timer);
+pub struct ParticleSpawnTimer(Timer);
 
 #[derive(Component)]
 struct TrailSpawnTimer(Timer);
