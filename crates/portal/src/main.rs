@@ -124,15 +124,16 @@ fn spawner(
 
 fn move_spiral_to_center(
     time: Res<Time>,
-    portal: Single<&Transform, (With<Portal>, Without<Particle>)>,
-    mut particles: Query<&mut Transform, (With<Particle>, Without<Portal>)>,
+    portal: Single<&GlobalTransform, (With<Portal>, Without<Particle>)>,
+    mut particles: Query<(&mut Transform, &GlobalTransform), With<Particle>>,
     config: Res<Config>,
     // mut debug_text: Single<&mut Text, With<DebugText>>,
 ) {
-    for mut particle in particles.iter_mut() {
-        let distance = portal.translation - particle.translation;
+    for particle in particles.iter_mut() {
+        let (mut local, global) = particle;
+        let distance = portal.translation() - global.translation();
         let angle = distance.y.atan2(distance.x) - config.particle.spiral_offset_angle.to_radians();
-        particle.translation += Vec3::new(
+        local.translation += Vec3::new(
             angle.cos() * config.particle.move_speed * time.delta_secs(),
             angle.sin() * config.particle.move_speed * time.delta_secs(),
             0.0,
@@ -155,7 +156,7 @@ fn despawner(
 
 fn trail_spawner(
     mut cmd: Commands,
-    mut particles: Query<(&Transform, &mut TrailSpawnTimer), With<Particle>>,
+    mut particles: Query<(&GlobalTransform, &mut TrailSpawnTimer), With<Particle>>,
     mesh: Res<ParticleMesh>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     time: Res<Time>,
@@ -170,7 +171,7 @@ fn trail_spawner(
                     color: WHITE.with_alpha(0.5).into(),
                     ..Default::default()
                 })),
-                Transform::from_translation(particle.translation),
+                Transform::from_translation(particle.translation()),
                 TrailTimeout(Timer::from_seconds(
                     config.particle.trail.timeout,
                     TimerMode::Once,
