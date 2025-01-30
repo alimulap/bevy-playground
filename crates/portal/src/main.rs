@@ -97,7 +97,6 @@ fn spawner(
     mesh: Res<ParticleMesh>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     config: Res<Config>,
-    mut debug_log: ResMut<DebugLog>,
 ) {
     if timer.0.tick(time.delta()).just_finished() {
         let angle = fastrand::f32() * std::f32::consts::PI * 2.0;
@@ -116,7 +115,6 @@ fn spawner(
             ))
             .id();
         cmd.entity(portal.into_inner()).add_child(particle);
-        debug_log.push_timed(format!("angle: {:.2}, distance: {:.2}", angle, distance));
     }
 }
 
@@ -125,8 +123,9 @@ fn move_spiral_to_center(
     portal: Single<&GlobalTransform, (With<Portal>, Without<Particle>)>,
     mut particles: Query<(&mut Transform, &GlobalTransform), With<Particle>>,
     config: Res<Config>,
-    // mut debug_text: Single<&mut Text, With<DebugText>>,
+    mut debug_log: ResMut<DebugLog>,
 ) {
+    let mut len = 0;
     for particle in particles.iter_mut() {
         let (mut local, global) = particle;
         let distance = portal.translation() - global.translation();
@@ -136,7 +135,9 @@ fn move_spiral_to_center(
             angle.sin() * config.particle.move_speed * time.delta_secs(),
             0.0,
         );
+        len += 1;
     }
+    debug_log.push(format!("Particles: {}", len));
 }
 
 fn despawner(

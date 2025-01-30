@@ -229,10 +229,13 @@ fn create_panel(
         .get(trigger.entity())
         .unwrap_or(&MaxWidth(Val::Vw(30.)));
     let title = cmd
-        .spawn((TextUI::new(title), TextLayout {
-            justify: JustifyText::Center,
-            ..default()
-        }))
+        .spawn((
+            TextUI::new(title),
+            TextLayout {
+                justify: JustifyText::Center,
+                ..default()
+            },
+        ))
         .id();
     let separator = cmd
         .spawn((
@@ -407,10 +410,13 @@ fn create_input_field(
             ..default()
         },))
         .with_children(|parent| {
-            parent.spawn((label.clone(), Node {
-                margin: UiRect::right(Val::Px(3.)),
-                ..default()
-            }));
+            parent.spawn((
+                label.clone(),
+                Node {
+                    margin: UiRect::right(Val::Px(3.)),
+                    ..default()
+                },
+            ));
             parent.spawn((
                 InputUI,
                 name.clone(),
@@ -457,6 +463,7 @@ impl DebugLog {
         self.content.push(content.into());
     }
 
+    #[allow(unused)]
     pub fn push_timed(&mut self, content: impl Into<String>) {
         if self.ready_push {
             self.push(content);
