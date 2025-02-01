@@ -1,3 +1,4 @@
+use avian2d::{math::Vector, prelude::*};
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 
 pub const WINDOW_HEIGHT: f32 = 600.;
@@ -17,6 +18,7 @@ fn main() {
             }),
             ..default()
         }))
+        .add_plugins((PhysicsPlugins::default(), PhysicsDebugPlugin::default()))
         .init_resource::<CursorPosition>()
         .add_systems(Startup, setup)
         .add_systems(
@@ -35,33 +37,94 @@ fn main() {
 struct Ship;
 
 fn setup(mut cmd: Commands, assets: Res<AssetServer>) {
-    cmd.spawn(Camera2d);
+    cmd.spawn((
+        Camera2d,
+        Projection::from(OrthographicProjection {
+            scale: 3.,
+            ..OrthographicProjection::default_2d()
+        }),
+    ));
 
     let ship_g = assets.load("ship_G.png");
 
-    cmd.spawn((Ship, Sprite::from_image(ship_g)));
+    cmd.spawn((
+        Ship,
+        Sprite::from_image(ship_g),
+        RigidBody::Kinematic,
+        MaxSpeed(1000.),
+        Collider::compound(vec![
+            (
+                Position::new(Vec2::default()),
+                Rotation::default(),
+                Collider::triangle(
+                    Vector::new(0., 50.),
+                    Vector::new(48., -31.),
+                    Vector::new(-48., -31.),
+                ),
+            ),
+            (
+                Position::new(Vec2::new(32., -31.)),
+                Rotation::default(),
+                Collider::triangle(
+                    Vector::new(17., 0.),
+                    Vector::new(-17., 0.),
+                    Vector::new(0., -17.),
+                ),
+            ),
+            (
+                Position::new(Vec2::new(-32., -31.)),
+                Rotation::default(),
+                Collider::triangle(
+                    Vector::new(17., 0.),
+                    Vector::new(-17., 0.),
+                    Vector::new(0., -17.),
+                ),
+            ),
+        ]),
+        DebugRender::default(),
+    ));
 }
 
-fn ship_strafe(mut ship: Single<&mut Transform, With<Ship>>, keyboard: Res<ButtonInput<KeyCode>>) {
-    let mut direction = Vec3::ZERO;
+#[derive(Component)]
+struct MaxSpeed(f32);
+
+fn ship_strafe(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    ship: Single<(&mut LinearVelocity, &MaxSpeed), With<Ship>>,
+) {
+    let (mut linvel, max_speed) = ship.into_inner();
+    let mut direction = Vector::ZERO;
     match (
         keyboard.pressed(KeyCode::ArrowRight) || keyboard.pressed(KeyCode::KeyD),
         keyboard.pressed(KeyCode::ArrowLeft) || keyboard.pressed(KeyCode::KeyA),
     ) {
-        (true, false) => direction.x = 1.0,
-        (false, true) => direction.x = -1.0,
+        (true, false) => direction.x = 1.0f32,
+        (false, true) => direction.x = -1.0f32,
         _ => (),
     }
     match (
         keyboard.pressed(KeyCode::ArrowUp) || keyboard.pressed(KeyCode::KeyW),
         keyboard.pressed(KeyCode::ArrowDown) || keyboard.pressed(KeyCode::KeyS),
     ) {
-        (true, false) => direction.y = 1.0,
-        (false, true) => direction.y = -1.0,
+        (true, false) => direction.y = 1.0f32,
+        (false, true) => direction.y = -1.0f32,
         _ => (),
     }
 
-    ship.translation += direction * 4.0;
+    let linve_magnitude = linvel.0.length();
+
+    if direction != Vector::ZERO {
+        if linve_magnitude <= max_speed.0 {
+            direction = direction.normalize() * 1000.;
+            linvel.0 = linvel.0.lerp(direction, 0.1);
+        } else {
+            linvel.0 = linvel.0.normalize() * max_speed.0;
+        }
+    } else if linve_magnitude > 0.1 {
+        linvel.0 = linvel.0.lerp(Vector::ZERO, 0.1);
+    } else {
+        linvel.0 = Vector::ZERO;
+    }
 }
 
 fn look_at_cursor(

@@ -21,6 +21,7 @@ serde = { version = "1.0.217", features = ["derive"] }
 toml = "0.8.19"
 fastrand = "2.3.0"
 bevy_simple_text_input = { git = "https://github.com/alimulap/bevy_simple_text_input" }
+avian2d = "0.2.1"
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]
