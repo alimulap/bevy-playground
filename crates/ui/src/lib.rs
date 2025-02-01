@@ -11,14 +11,14 @@ pub struct PlaygroundUIPlugin;
 impl Plugin for PlaygroundUIPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(InputUIFocused(None))
-            .insert_resource(DebugLog::new())
+            // .insert_resource(DebugLog::new())
             .add_event::<InputUISubmitEvent>()
             .add_plugins(TextInputPlugin)
             .add_systems(
                 Update,
                 (
                     keyboard_handler,
-                    debug_panel_system,
+                    debug_panel_system.run_if(resource_exists::<DebugLog>),
                     focus.before(TextInputSystem),
                 ),
             )
@@ -330,10 +330,12 @@ impl Default for DebugLog {
 fn debug_panel_system(
     time: Res<Time>,
     mut debug_log: ResMut<DebugLog>,
-    mut debug_text: Single<&mut Text, With<DebugPanelText>>,
+    mut debug_text: Query<&mut Text, With<DebugPanelText>>,
 ) {
     debug_log.tick(&time);
     if debug_log.is_changed() {
-        debug_text.0 = debug_log.get_content();
+        for mut debug_text in debug_text.iter_mut() {
+            debug_text.0 = debug_log.get_content();
+        }
     }
 }
