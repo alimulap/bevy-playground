@@ -55,8 +55,9 @@ fn setup(mut cmd: Commands, assets: Res<AssetServer>) {
     cmd.spawn((
         Ship,
         Sprite::from_image(ship_g),
-        RigidBody::Kinematic,
         MaxSpeed(1000.),
+        Rotation::radians(0.),
+        RigidBody::Kinematic,
         Collider::compound(vec![
             (
                 Position::new(Vec2::default()),
@@ -156,7 +157,7 @@ fn build_ui(mut cmd: Commands) {
 fn look_at_cursor(
     cursor_position: Res<CursorPosition>,
     camera: Single<(&Camera, &GlobalTransform)>,
-    mut ship: Single<(&mut Transform, &GlobalTransform), With<Ship>>,
+    mut ship: Single<(&mut Rotation, &GlobalTransform), With<Ship>>,
 ) {
     let cursor_position = cursor_position.0;
     let ship_on_viewport = camera
@@ -166,9 +167,7 @@ fn look_at_cursor(
     let angle = (ship_on_viewport.y - cursor_position.y)
         .atan2(cursor_position.x - ship_on_viewport.x)
         - std::f32::consts::PI / 2.;
-    ship.0.rotation = Quat::from_rotation_z(angle);
-    // println!("cursor_position: {:?}", cursor_position);
-    // println!("ship_on_viewport: {:?}", ship_on_viewport);
+    *ship.0 = ship.0.nlerp(Rotation::radians(angle), 0.25)
 }
 
 #[derive(Resource, Default)]
