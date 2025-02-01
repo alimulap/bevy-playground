@@ -32,6 +32,7 @@ fn main() {
                 ship_strafe,
                 track_cursor_position,
                 look_at_cursor,
+                shoot_bullet,
                 close_window.run_if(input_just_pressed(KeyCode::KeyQ)),
             ),
         )
@@ -40,6 +41,9 @@ fn main() {
 
 #[derive(Component)]
 struct Ship;
+
+#[derive(Component)]
+struct Nozzle;
 
 fn setup(mut cmd: Commands, assets: Res<AssetServer>) {
     cmd.spawn((
@@ -88,7 +92,10 @@ fn setup(mut cmd: Commands, assets: Res<AssetServer>) {
             ),
         ]),
         DebugRender::default(),
-    ));
+    ))
+    .with_children(|parent| {
+        parent.spawn((Nozzle, Transform::from_xyz(0., 50., 0.)));
+    });
 }
 
 #[derive(Component)]
@@ -133,6 +140,53 @@ fn ship_strafe(
     }
 }
 
+fn look_at_cursor(
+    cursor_position: Res<CursorPosition>,
+    camera: Single<(&Camera, &GlobalTransform)>,
+    mut ship: Single<(&mut Rotation, &GlobalTransform), With<Ship>>,
+) {
+    let cursor_position = cursor_position.0;
+    let ship_on_viewport = camera
+        .0
+        .world_to_viewport(camera.1, ship.1.translation())
+        .unwrap();
+    let angle = (ship_on_viewport.y - cursor_position.y)
+        .atan2(cursor_position.x - ship_on_viewport.x)
+        - std::f32::consts::PI / 2.;
+    *ship.0 = ship.0.nlerp(Rotation::radians(angle), 0.25)
+}
+
+#[derive(Component)]
+struct Bullet;
+
+fn shoot_bullet(
+    mut cmd: Commands,
+    keyboard: Res<ButtonInput<KeyCode>>,
+    assets: Res<AssetServer>,
+    ship_rotaion: Single<&Rotation, With<Ship>>,
+    nozzle: Single<&GlobalTransform, With<Nozzle>>,
+) {
+    if keyboard.just_pressed(KeyCode::KeyJ) {
+        let image = assets.load("effect_yellow.png");
+        let angle = ship_rotaion.as_radians() + std::f32::consts::PI / 2.;
+        cmd.spawn((
+            Bullet,
+            Sprite::from_image(image),
+            RigidBody::Kinematic,
+            Collider::rectangle(30., 30.),
+            Sensor,
+            LinearVelocity(Vec2 {
+                x: angle.cos() * 1000.,
+                y: angle.sin() * 1000.,
+            }),
+            Transform::default()
+                .with_translation(nozzle.translation())
+                .with_scale(Vec3::splat(0.25)),
+            DebugRender::default(),
+        ));
+    }
+}
+
 fn build_ui(mut cmd: Commands) {
     cmd.spawn((
         Node {
@@ -152,22 +206,6 @@ fn build_ui(mut cmd: Commands) {
                 parent.spawn(TextUI::new("Test text"));
             });
     });
-}
-
-fn look_at_cursor(
-    cursor_position: Res<CursorPosition>,
-    camera: Single<(&Camera, &GlobalTransform)>,
-    mut ship: Single<(&mut Rotation, &GlobalTransform), With<Ship>>,
-) {
-    let cursor_position = cursor_position.0;
-    let ship_on_viewport = camera
-        .0
-        .world_to_viewport(camera.1, ship.1.translation())
-        .unwrap();
-    let angle = (ship_on_viewport.y - cursor_position.y)
-        .atan2(cursor_position.x - ship_on_viewport.x)
-        - std::f32::consts::PI / 2.;
-    *ship.0 = ship.0.nlerp(Rotation::radians(angle), 0.25)
 }
 
 #[derive(Resource, Default)]
