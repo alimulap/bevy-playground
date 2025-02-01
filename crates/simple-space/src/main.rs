@@ -1,5 +1,6 @@
 use avian2d::{math::Vector, prelude::*};
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
+use playground_ui::{Panel, PanelTitle, PlaygroundUIPlugin, TextUI};
 
 pub const WINDOW_HEIGHT: f32 = 600.;
 pub const WINDOW_WIDTH: f32 = 900.;
@@ -18,9 +19,13 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins((PhysicsPlugins::default(), PhysicsDebugPlugin::default()))
+        .add_plugins((
+            PhysicsPlugins::default(),
+            //    PhysicsDebugPlugin::default()
+        ))
+        .add_plugins(PlaygroundUIPlugin)
         .init_resource::<CursorPosition>()
-        .add_systems(Startup, setup)
+        .add_systems(Startup, (setup, build_ui))
         .add_systems(
             Update,
             (
@@ -125,6 +130,27 @@ fn ship_strafe(
     } else {
         linvel.0 = Vector::ZERO;
     }
+}
+
+fn build_ui(mut cmd: Commands) {
+    cmd.spawn((
+        Node {
+            flex_direction: FlexDirection::Column,
+            width: Val::Vw(100.),
+            height: Val::Vh(100.),
+            border: UiRect::axes(Val::Px(3.), Val::Px(3.)),
+            padding: UiRect::all(Val::Px(7.)),
+            ..default()
+        },
+        BorderColor(Color::WHITE),
+    ))
+    .with_children(|parent| {
+        parent
+            .spawn((Panel, PanelTitle::new("Panel")))
+            .with_children(|parent| {
+                parent.spawn(TextUI::new("Test text"));
+            });
+    });
 }
 
 fn look_at_cursor(

@@ -3914,6 +3914,7 @@ dependencies = [
  "bevy",
  "bevy_simple_text_input",
  "fastrand",
+ "playground_ui",
  "serde",
  "toml",
 ]
