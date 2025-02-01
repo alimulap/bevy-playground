@@ -1,6 +1,7 @@
 use bevy::{color::palettes::css::WHITE, prelude::*};
 use config::{Config, ConfigPlugin, RelPos};
-use ui::{DebugLog, UIPlugin};
+use playground_ui::DebugLog;
+use ui::UIPlugin;
 
 pub const WINDOW_HEIGHT: f32 = 600.;
 pub const WINDOW_WIDTH: f32 = 900.;
