@@ -1,6 +1,9 @@
-use avian2d::{math::Vector, prelude::*};
+use avian2d::{
+    math::{PI, Vector},
+    prelude::*,
+};
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
-use playground_ui::{Panel, PanelTitle, PlaygroundUIPlugin, TextUI};
+use playground_ui::{DebugLog, DebugPanelText, Panel, PanelTitle, PlaygroundUIPlugin, TextUI};
 
 pub const WINDOW_HEIGHT: f32 = 600.;
 pub const WINDOW_WIDTH: f32 = 900.;
@@ -19,12 +22,10 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins((
-            PhysicsPlugins::default(),
-            //    PhysicsDebugPlugin::default()
-        ))
+        .add_plugins((PhysicsPlugins::default(), PhysicsDebugPlugin::default()))
         .add_plugins(PlaygroundUIPlugin)
         .init_resource::<CursorPosition>()
+        .init_resource::<DebugLog>()
         .add_systems(Startup, (setup, build_ui))
         .add_systems(
             Update,
@@ -42,6 +43,7 @@ fn main() {
 }
 
 #[derive(Component)]
+#[require(Transform, Visibility)]
 struct Ship;
 
 #[derive(Component)]
@@ -58,46 +60,46 @@ fn setup(mut cmd: Commands, assets: Res<AssetServer>) {
 
     let ship_g = assets.load("ship_G.png");
 
-    cmd.spawn((
-        Ship,
-        Sprite::from_image(ship_g),
-        MaxSpeed(1000.),
-        Rotation::radians(0.),
-        RigidBody::Kinematic,
-        Collider::compound(vec![
-            (
-                Position::new(Vec2::default()),
-                Rotation::default(),
-                Collider::triangle(
-                    Vector::new(0., 50.),
-                    Vector::new(48., -31.),
-                    Vector::new(-48., -31.),
-                ),
-            ),
-            (
-                Position::new(Vec2::new(32., -31.)),
-                Rotation::default(),
-                Collider::triangle(
-                    Vector::new(17., 0.),
-                    Vector::new(-17., 0.),
-                    Vector::new(0., -17.),
-                ),
-            ),
-            (
-                Position::new(Vec2::new(-32., -31.)),
-                Rotation::default(),
-                Collider::triangle(
-                    Vector::new(17., 0.),
-                    Vector::new(-17., 0.),
-                    Vector::new(0., -17.),
-                ),
-            ),
-        ]),
-        DebugRender::default(),
-    ))
-    .with_children(|parent| {
-        parent.spawn((Nozzle, Transform::from_xyz(0., 50., 0.)));
-    });
+    cmd.spawn((Ship, MaxSpeed(1000.), RigidBody::Kinematic))
+        .with_children(|parent| {
+            parent.spawn((
+                Sprite::from_image(ship_g),
+                Transform::default().with_rotation(Quat::from_rotation_z(-(PI / 2.))),
+            ));
+            parent.spawn((
+                Collider::compound(vec![
+                    (
+                        Position::new(Vec2::default()),
+                        Rotation::default(),
+                        Collider::triangle(
+                            Vector::new(50., 0.),
+                            Vector::new(-31., -48.),
+                            Vector::new(-31., 48.),
+                        ),
+                    ),
+                    (
+                        Position::new(Vec2::new(-31., -32.)),
+                        Rotation::default(),
+                        Collider::triangle(
+                            Vector::new(0., -17.),
+                            Vector::new(0., 17.),
+                            Vector::new(-17., 0.),
+                        ),
+                    ),
+                    (
+                        Position::new(Vec2::new(-31., 32.)),
+                        Rotation::default(),
+                        Collider::triangle(
+                            Vector::new(0., -17.),
+                            Vector::new(0., 17.),
+                            Vector::new(-17., 0.),
+                        ),
+                    ),
+                ]),
+                DebugRender::default(),
+            ));
+            parent.spawn((Nozzle, Transform::from_xyz(50., 0., 0.)));
+        });
 
     cmd.insert_resource(RotateMethod::Cursor);
 }
@@ -165,31 +167,39 @@ fn switch_rotate_method(
 fn look_at_cursor(
     cursor_position: Res<CursorPosition>,
     camera: Single<(&Camera, &GlobalTransform)>,
-    mut ship: Single<(&mut Rotation, &GlobalTransform), With<Ship>>,
+    mut ship: Single<(&mut Transform, &GlobalTransform), With<Ship>>,
+    mut debug_log: ResMut<DebugLog>,
 ) {
     let cursor_position = cursor_position.0;
     let ship_on_viewport = camera
         .0
         .world_to_viewport(camera.1, ship.1.translation())
         .unwrap();
-    let angle = (ship_on_viewport.y - cursor_position.y)
-        .atan2(cursor_position.x - ship_on_viewport.x)
-        - std::f32::consts::PI / 2.;
-    *ship.0 = ship.0.nlerp(Rotation::radians(angle), 0.25)
+    let angle =
+        (ship_on_viewport.y - cursor_position.y).atan2(cursor_position.x - ship_on_viewport.x);
+    ship.0.rotation = Quat::from_rotation_z(
+        Rotation::radians(ship.0.rotation.to_euler(EulerRot::XYZ).2)
+            .nlerp(Rotation::radians(angle), 0.25)
+            .as_radians(),
+    );
+    debug_log.push(format!(
+        "ship rotation: {:.2?}",
+        ship.0.rotation.to_euler(EulerRot::XYZ)
+    ));
 }
 
 fn rotate_with_keyboard(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut ship: Single<(&mut Rotation, &GlobalTransform), With<Ship>>,
+    mut ship: Single<(&mut Transform, &GlobalTransform), With<Ship>>,
 ) {
-    let mut angle = ship.0.as_radians();
+    let mut angle = ship.0.rotation.z;
     if keyboard.pressed(KeyCode::KeyK) {
         angle -= 0.1;
     }
     if keyboard.pressed(KeyCode::KeyN) {
         angle += 0.1;
     }
-    *ship.0 = Rotation::radians(angle);
+    ship.0.rotation.z = angle;
 }
 
 #[derive(Component)]
@@ -200,12 +210,12 @@ fn shoot_bullet(
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
     assets: Res<AssetServer>,
-    ship_rotaion: Single<&Rotation, With<Ship>>,
+    ship: Single<&Transform, With<Ship>>,
     nozzle: Single<&GlobalTransform, With<Nozzle>>,
 ) {
     if keyboard.just_pressed(KeyCode::KeyJ) || mouse.just_pressed(MouseButton::Left) {
         let image = assets.load("effect_yellow.png");
-        let angle = ship_rotaion.as_radians() + std::f32::consts::PI / 2.;
+        let angle = ship.rotation.to_euler(EulerRot::XYZ).2;
         cmd.spawn((
             Bullet,
             Sprite::from_image(image),
@@ -218,7 +228,8 @@ fn shoot_bullet(
             }),
             Transform::default()
                 .with_translation(nozzle.translation())
-                .with_scale(Vec3::splat(0.25)),
+                .with_scale(Vec3::splat(0.25))
+                .with_rotation(Quat::from_rotation_z(angle + PI / 2.)),
             DebugRender::default(),
         ));
     }
@@ -241,6 +252,11 @@ fn build_ui(mut cmd: Commands) {
             .spawn((Panel, PanelTitle::new("Panel")))
             .with_children(|parent| {
                 parent.spawn(TextUI::new("Test text"));
+                parent
+                    .spawn((Panel, PanelTitle::new("Debug")))
+                    .with_children(|parent| {
+                        parent.spawn((DebugPanelText, TextUI::new("")));
+                    });
             });
     });
 }
