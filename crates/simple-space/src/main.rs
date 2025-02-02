@@ -202,6 +202,7 @@ fn rotate_with_keyboard(
 }
 
 #[derive(Component)]
+#[require(Transform, Visibility)]
 struct Bullet;
 
 #[derive(Resource)]
@@ -232,20 +233,27 @@ fn shoot_bullet(
     let angle = ship.rotation.to_euler(EulerRot::XYZ).2;
     cmd.spawn((
         Bullet,
-        Sprite::from_image(image),
         RigidBody::Kinematic,
-        Collider::rectangle(30., 30.),
-        Sensor,
         LinearVelocity(Vec2 {
             x: angle.cos() * 2000.,
             y: angle.sin() * 2000.,
         }),
         Transform::default()
             .with_translation(nozzle.translation())
-            .with_scale(Vec3::splat(0.25))
-            .with_rotation(Quat::from_rotation_z(angle + PI / 2.)),
-        DebugRender::default(),
-    ));
+            .with_rotation(Quat::from_rotation_z(angle - PI / 2.)),
+    ))
+    .with_children(|parent| {
+        parent.spawn((
+            Sprite::from_image(image),
+            Transform::from_scale(Vec3::new(0.25, 1., 1.)),
+        ));
+        parent.spawn((
+            Transform::from_translation(Vec3::new(0., 32., 0.)),
+            Collider::rectangle(16., 64.),
+            Sensor,
+            DebugRender::default(),
+        ));
+    });
 }
 
 fn build_ui(mut cmd: Commands) {
