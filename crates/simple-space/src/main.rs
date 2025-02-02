@@ -31,8 +31,10 @@ fn main() {
             (
                 ship_strafe,
                 track_cursor_position,
-                look_at_cursor,
                 shoot_bullet,
+                switch_rotate_method,
+                look_at_cursor.run_if(resource_equals(RotateMethod::Cursor)),
+                rotate_with_keyboard.run_if(resource_equals(RotateMethod::Keyboard)),
                 close_window.run_if(input_just_pressed(KeyCode::KeyQ)),
             ),
         )
@@ -96,6 +98,8 @@ fn setup(mut cmd: Commands, assets: Res<AssetServer>) {
     .with_children(|parent| {
         parent.spawn((Nozzle, Transform::from_xyz(0., 50., 0.)));
     });
+
+    cmd.insert_resource(RotateMethod::Cursor);
 }
 
 #[derive(Component)]
@@ -108,16 +112,16 @@ fn ship_strafe(
     let (mut linvel, max_speed) = ship.into_inner();
     let mut direction = Vector::ZERO;
     match (
-        keyboard.pressed(KeyCode::ArrowRight) || keyboard.pressed(KeyCode::KeyD),
-        keyboard.pressed(KeyCode::ArrowLeft) || keyboard.pressed(KeyCode::KeyA),
+        keyboard.pressed(KeyCode::KeyD),
+        keyboard.pressed(KeyCode::KeyA),
     ) {
         (true, false) => direction.x = 1.0f32,
         (false, true) => direction.x = -1.0f32,
         _ => (),
     }
     match (
-        keyboard.pressed(KeyCode::ArrowUp) || keyboard.pressed(KeyCode::KeyW),
-        keyboard.pressed(KeyCode::ArrowDown) || keyboard.pressed(KeyCode::KeyS),
+        keyboard.pressed(KeyCode::KeyW),
+        keyboard.pressed(KeyCode::KeyS),
     ) {
         (true, false) => direction.y = 1.0f32,
         (false, true) => direction.y = -1.0f32,
@@ -140,6 +144,24 @@ fn ship_strafe(
     }
 }
 
+#[derive(Resource, PartialEq, Eq)]
+enum RotateMethod {
+    Cursor,
+    Keyboard,
+}
+
+fn switch_rotate_method(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut rotate_method: ResMut<RotateMethod>,
+) {
+    if keyboard.just_pressed(KeyCode::KeyY) {
+        *rotate_method = match *rotate_method {
+            RotateMethod::Cursor => RotateMethod::Keyboard,
+            RotateMethod::Keyboard => RotateMethod::Cursor,
+        }
+    }
+}
+
 fn look_at_cursor(
     cursor_position: Res<CursorPosition>,
     camera: Single<(&Camera, &GlobalTransform)>,
@@ -154,6 +176,20 @@ fn look_at_cursor(
         .atan2(cursor_position.x - ship_on_viewport.x)
         - std::f32::consts::PI / 2.;
     *ship.0 = ship.0.nlerp(Rotation::radians(angle), 0.25)
+}
+
+fn rotate_with_keyboard(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut ship: Single<(&mut Rotation, &GlobalTransform), With<Ship>>,
+) {
+    let mut angle = ship.0.as_radians();
+    if keyboard.pressed(KeyCode::KeyK) {
+        angle -= 0.1;
+    }
+    if keyboard.pressed(KeyCode::KeyN) {
+        angle += 0.1;
+    }
+    *ship.0 = Rotation::radians(angle);
 }
 
 #[derive(Component)]
