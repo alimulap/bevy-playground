@@ -32,7 +32,8 @@ fn main() {
             (
                 ship_strafe,
                 track_cursor_position,
-                shoot_bullet.run_if(fire_button_pressed),
+                fire_tick,
+                shoot_bullet.run_if(fire_button_pressed.and(can_fire)),
                 switch_rotate_method.run_if(switch_key_pressed),
                 look_at_cursor.run_if(resource_equals(RotateMethod::Cursor)),
                 rotate_with_keyboard.run_if(resource_equals(RotateMethod::Keyboard)),
@@ -59,6 +60,9 @@ fn setup(mut cmd: Commands, assets: Res<AssetServer>) {
     ));
 
     let ship_g = assets.load("ship_G.png");
+
+    cmd.insert_resource(RotateMethod::Cursor);
+    cmd.insert_resource(FireCooldown(Timer::from_seconds(0.1, TimerMode::Repeating)));
 
     cmd.spawn((Ship, MaxSpeed(1000.), RigidBody::Kinematic))
         .with_children(|parent| {
@@ -100,8 +104,6 @@ fn setup(mut cmd: Commands, assets: Res<AssetServer>) {
             ));
             parent.spawn((Nozzle, Transform::from_xyz(50., 0., 0.)));
         });
-
-    cmd.insert_resource(RotateMethod::Cursor);
 }
 
 #[derive(Component)]
@@ -204,11 +206,22 @@ fn rotate_with_keyboard(
 #[derive(Component)]
 struct Bullet;
 
+#[derive(Resource)]
+struct FireCooldown(Timer);
+
 fn fire_button_pressed(
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
 ) -> bool {
-    keyboard.just_pressed(KeyCode::KeyJ) || mouse.just_pressed(MouseButton::Left)
+    keyboard.pressed(KeyCode::KeyJ) || mouse.pressed(MouseButton::Left)
+}
+
+fn fire_tick(mut fire_cooldown: ResMut<FireCooldown>, time: Res<Time>) {
+    fire_cooldown.0.tick(time.delta());
+}
+
+fn can_fire(fire_cooldown: Res<FireCooldown>) -> bool {
+    fire_cooldown.0.just_finished()
 }
 
 fn shoot_bullet(
@@ -226,8 +239,8 @@ fn shoot_bullet(
         Collider::rectangle(30., 30.),
         Sensor,
         LinearVelocity(Vec2 {
-            x: angle.cos() * 1000.,
-            y: angle.sin() * 1000.,
+            x: angle.cos() * 2000.,
+            y: angle.sin() * 2000.,
         }),
         Transform::default()
             .with_translation(nozzle.translation())
