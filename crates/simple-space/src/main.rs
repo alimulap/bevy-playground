@@ -32,8 +32,8 @@ fn main() {
             (
                 ship_strafe,
                 track_cursor_position,
-                shoot_bullet,
-                switch_rotate_method,
+                shoot_bullet.run_if(fire_button_pressed),
+                switch_rotate_method.run_if(switch_key_pressed),
                 look_at_cursor.run_if(resource_equals(RotateMethod::Cursor)),
                 rotate_with_keyboard.run_if(resource_equals(RotateMethod::Keyboard)),
                 close_window.run_if(input_just_pressed(KeyCode::KeyQ)),
@@ -152,15 +152,14 @@ enum RotateMethod {
     Keyboard,
 }
 
-fn switch_rotate_method(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    mut rotate_method: ResMut<RotateMethod>,
-) {
-    if keyboard.just_pressed(KeyCode::KeyY) {
-        *rotate_method = match *rotate_method {
-            RotateMethod::Cursor => RotateMethod::Keyboard,
-            RotateMethod::Keyboard => RotateMethod::Cursor,
-        }
+fn switch_key_pressed(keyboard: Res<ButtonInput<KeyCode>>) -> bool {
+    keyboard.just_pressed(KeyCode::KeyY)
+}
+
+fn switch_rotate_method(mut rotate_method: ResMut<RotateMethod>) {
+    *rotate_method = match *rotate_method {
+        RotateMethod::Cursor => RotateMethod::Keyboard,
+        RotateMethod::Keyboard => RotateMethod::Cursor,
     }
 }
 
@@ -205,34 +204,37 @@ fn rotate_with_keyboard(
 #[derive(Component)]
 struct Bullet;
 
-fn shoot_bullet(
-    mut cmd: Commands,
+fn fire_button_pressed(
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
+) -> bool {
+    keyboard.just_pressed(KeyCode::KeyJ) || mouse.just_pressed(MouseButton::Left)
+}
+
+fn shoot_bullet(
+    mut cmd: Commands,
     assets: Res<AssetServer>,
     ship: Single<&Transform, With<Ship>>,
     nozzle: Single<&GlobalTransform, With<Nozzle>>,
 ) {
-    if keyboard.just_pressed(KeyCode::KeyJ) || mouse.just_pressed(MouseButton::Left) {
-        let image = assets.load("effect_yellow.png");
-        let angle = ship.rotation.to_euler(EulerRot::XYZ).2;
-        cmd.spawn((
-            Bullet,
-            Sprite::from_image(image),
-            RigidBody::Kinematic,
-            Collider::rectangle(30., 30.),
-            Sensor,
-            LinearVelocity(Vec2 {
-                x: angle.cos() * 1000.,
-                y: angle.sin() * 1000.,
-            }),
-            Transform::default()
-                .with_translation(nozzle.translation())
-                .with_scale(Vec3::splat(0.25))
-                .with_rotation(Quat::from_rotation_z(angle + PI / 2.)),
-            DebugRender::default(),
-        ));
-    }
+    let image = assets.load("effect_yellow.png");
+    let angle = ship.rotation.to_euler(EulerRot::XYZ).2;
+    cmd.spawn((
+        Bullet,
+        Sprite::from_image(image),
+        RigidBody::Kinematic,
+        Collider::rectangle(30., 30.),
+        Sensor,
+        LinearVelocity(Vec2 {
+            x: angle.cos() * 1000.,
+            y: angle.sin() * 1000.,
+        }),
+        Transform::default()
+            .with_translation(nozzle.translation())
+            .with_scale(Vec3::splat(0.25))
+            .with_rotation(Quat::from_rotation_z(angle + PI / 2.)),
+        DebugRender::default(),
+    ));
 }
 
 fn build_ui(mut cmd: Commands) {
