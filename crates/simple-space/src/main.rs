@@ -198,11 +198,12 @@ struct Bullet;
 fn shoot_bullet(
     mut cmd: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
+    mouse: Res<ButtonInput<MouseButton>>,
     assets: Res<AssetServer>,
     ship_rotaion: Single<&Rotation, With<Ship>>,
     nozzle: Single<&GlobalTransform, With<Nozzle>>,
 ) {
-    if keyboard.just_pressed(KeyCode::KeyJ) {
+    if keyboard.just_pressed(KeyCode::KeyJ) || mouse.just_pressed(MouseButton::Left) {
         let image = assets.load("effect_yellow.png");
         let angle = ship_rotaion.as_radians() + std::f32::consts::PI / 2.;
         cmd.spawn((
