@@ -193,14 +193,12 @@ fn rotate_with_keyboard(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut ship: Single<(&mut Transform, &GlobalTransform), With<Ship>>,
 ) {
-    let mut angle = ship.0.rotation.z;
     if keyboard.pressed(KeyCode::KeyK) {
-        angle -= 0.1;
+        ship.0.rotate_local_z(-0.1);
     }
     if keyboard.pressed(KeyCode::KeyN) {
-        angle += 0.1;
+        ship.0.rotate_local_z(0.1);
     }
-    ship.0.rotation.z = angle;
 }
 
 #[derive(Component)]
