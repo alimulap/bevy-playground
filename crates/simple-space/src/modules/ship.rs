@@ -157,11 +157,8 @@ fn look_at_cursor(
         .unwrap();
     let angle =
         (ship_on_viewport.y - cursor_position.y).atan2(cursor_position.x - ship_on_viewport.x);
-    ship.0.rotation = Quat::from_rotation_z(
-        Rotation::radians(ship.0.rotation.to_euler(EulerRot::XYZ).2)
-            .nlerp(Rotation::radians(angle), 0.25)
-            .as_radians(),
-    );
+    ship.0.rotation =
+        Quat::from(Rotation::from(ship.0.rotation).nlerp(Rotation::radians(angle), 0.5));
     debug_log.push(format!(
         "ship rotation: {:.2?}",
         ship.0.rotation.to_euler(EulerRot::XYZ)
