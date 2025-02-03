@@ -1,5 +1,5 @@
 use avian2d::{math::PI, prelude::*};
-use bevy::{ecs::observer::TriggerTargets, prelude::*};
+use bevy::prelude::*;
 
 use super::{
     object_pool::{ObjectPool, pool_empty},
@@ -33,21 +33,25 @@ fn setup(mut cmd: Commands, assets: Res<AssetServer>) {
     let image = assets.load("effect_yellow.png");
     for _ in 0..20 {
         pool.put(
-            cmd.spawn((Bullet, RigidBody::Kinematic, RigidBodyDisabled))
-                .with_children(|parent| {
-                    parent.spawn((
-                        BulletImage,
-                        Sprite::from_image(image.clone()),
-                        Transform::from_scale(Vec3::new(0.25, 1., 1.)),
-                        Visibility::Hidden,
-                    ));
-                    parent.spawn((
-                        Transform::from_translation(Vec3::new(0., 32., 0.)),
-                        Collider::rectangle(16., 64.),
-                        Sensor,
-                    ));
-                })
-                .id(),
+            cmd.spawn((
+                Bullet,
+                RigidBody::Kinematic,
+                RigidBodyDisabled,
+                Visibility::Hidden,
+            ))
+            .with_children(|parent| {
+                parent.spawn((
+                    Sprite::from_image(image.clone()),
+                    Transform::from_scale(Vec3::new(0.25, 1., 1.)),
+                    Visibility::Inherited,
+                ));
+                parent.spawn((
+                    Transform::from_translation(Vec3::new(0., 32., 0.)),
+                    Collider::rectangle(16., 64.),
+                    Sensor,
+                ));
+            })
+            .id(),
         );
     }
 
@@ -57,9 +61,6 @@ fn setup(mut cmd: Commands, assets: Res<AssetServer>) {
 #[derive(Component, Clone)]
 #[require(Transform, Visibility)]
 pub struct Bullet;
-
-#[derive(Component)]
-struct BulletImage;
 
 #[derive(Resource)]
 struct FireCooldown(Timer);
@@ -82,29 +83,27 @@ fn can_fire(fire_cooldown: Res<FireCooldown>) -> bool {
 fn shoot_bullet_from_pool(
     mut cmd: Commands,
     mut pool: ResMut<ObjectPool<Bullet>>,
-    mut bullet_query: Query<(Entity, &mut LinearVelocity), With<Bullet>>,
+    mut bullet: Query<(&mut LinearVelocity, &mut Visibility), With<Bullet>>,
     ship: Single<Entity, With<Ship>>,
     mut transform: Query<&mut Transform>,
     nozzle: Single<&GlobalTransform, With<Nozzle>>,
-    mut bullet_image: Query<(&Parent, &mut Visibility), With<BulletImage>>,
 ) {
-    let bullet = pool.get().unwrap();
+    let bullet_id = pool.get().unwrap();
+    let (mut linvel, mut visibility) = bullet.get_mut(bullet_id).unwrap();
+
     let ship = transform.get_mut(*ship).unwrap();
     let angle = ship.rotation.to_euler(EulerRot::XYZ).2;
-    let (entity, mut linvel) = bullet_query.get_mut(bullet).unwrap();
-    let mut transform = transform.get_mut(entity).unwrap();
-    for (id, mut visibility) in bullet_image.iter_mut() {
-        if id.entities()[0] == entity {
-            *visibility = Visibility::Visible;
-        }
-    }
+
+    let mut transform = transform.get_mut(bullet_id).unwrap();
     transform.translation = nozzle.translation();
     transform.rotation = Quat::from_rotation_z(angle - PI / 2.);
+    *visibility = Visibility::Visible;
+
+    cmd.entity(bullet_id).remove::<RigidBodyDisabled>();
     linvel.0 = Vec2 {
         x: angle.cos() * 2000.,
         y: angle.sin() * 2000.,
     };
-    cmd.entity(bullet).remove::<RigidBodyDisabled>();
 }
 
 fn shoot_bullet(
