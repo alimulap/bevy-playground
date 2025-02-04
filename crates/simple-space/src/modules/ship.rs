@@ -7,6 +7,12 @@ use playground_ui::DebugLog;
 
 use crate::CursorPosition;
 
+use super::{
+    bullet::{Bullet, BulletProp, YellowBullet},
+    object_pool::{ObjectPool, pool_empty},
+    template::TemplateExt,
+};
+
 pub struct ShipPlugin;
 
 impl Plugin for ShipPlugin {
@@ -18,6 +24,17 @@ impl Plugin for ShipPlugin {
                 switch_rotate_method.run_if(switch_key_pressed),
                 look_at_cursor.run_if(resource_equals(RotateMethod::Cursor)),
                 rotate_with_keyboard.run_if(resource_equals(RotateMethod::Keyboard)),
+                fire_tick,
+                shoot_bullet_from_pool.run_if(
+                    fire_button_pressed
+                        .and(can_fire)
+                        .and(not(pool_empty::<YellowBullet>)),
+                ),
+                shoot_bullet.run_if(
+                    fire_button_pressed
+                        .and(can_fire)
+                        .and(pool_empty::<YellowBullet>),
+                ),
             ),
         );
     }
@@ -38,6 +55,7 @@ fn setup(mut cmd: Commands, assets: Res<AssetServer>) {
             ..OrthographicProjection::default_2d()
         }),
     ));
+    cmd.insert_resource(FireCooldown(Timer::from_seconds(0.1, TimerMode::Repeating)));
 
     let ship_g = assets.load("ship_G.png");
 
@@ -175,4 +193,66 @@ fn rotate_with_keyboard(
     if keyboard.pressed(KeyCode::KeyN) {
         ship.0.rotate_local_z(0.1);
     }
+}
+
+#[derive(Resource)]
+struct FireCooldown(Timer);
+
+fn fire_button_pressed(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mouse: Res<ButtonInput<MouseButton>>,
+) -> bool {
+    keyboard.pressed(KeyCode::KeyJ) || mouse.pressed(MouseButton::Left)
+}
+
+fn fire_tick(mut fire_cooldown: ResMut<FireCooldown>, time: Res<Time>) {
+    fire_cooldown.0.tick(time.delta());
+}
+
+fn can_fire(fire_cooldown: Res<FireCooldown>) -> bool {
+    fire_cooldown.0.just_finished()
+}
+
+fn shoot_bullet_from_pool(
+    mut cmd: Commands,
+    mut pool: ResMut<ObjectPool<YellowBullet>>,
+    mut bullet: Query<(&mut LinearVelocity, &mut Visibility), With<Bullet>>,
+    ship: Single<Entity, With<Ship>>,
+    mut transform: Query<&mut Transform>,
+    nozzle: Single<&GlobalTransform, With<Nozzle>>,
+) {
+    let bullet_id = pool.get().unwrap();
+    let (mut linvel, mut visibility) = bullet.get_mut(bullet_id).unwrap();
+
+    let ship = transform.get_mut(*ship).unwrap();
+    let angle = ship.rotation.to_euler(EulerRot::XYZ).2;
+
+    let mut transform = transform.get_mut(bullet_id).unwrap();
+    transform.translation = nozzle.translation();
+    transform.rotation = Quat::from_rotation_z(angle - PI / 2.);
+    *visibility = Visibility::Visible;
+
+    cmd.entity(bullet_id).remove::<RigidBodyDisabled>();
+    linvel.0 = Vec2 {
+        x: angle.cos() * 2000.,
+        y: angle.sin() * 2000.,
+    };
+}
+
+fn shoot_bullet(
+    mut cmd: Commands,
+    assets: Res<AssetServer>,
+    ship: Single<Entity, With<Ship>>,
+    mut transform: Query<&mut Transform>,
+    nozzle: Single<&GlobalTransform, With<Nozzle>>,
+) {
+    let image = assets.load("effect_yellow.png");
+    let ship = transform.get_mut(*ship).unwrap();
+    let angle = ship.rotation.to_euler(EulerRot::XYZ).2;
+    cmd.template::<Bullet>(BulletProp::Active(
+        image,
+        Color::WHITE,
+        angle,
+        nozzle.translation(),
+    ));
 }
