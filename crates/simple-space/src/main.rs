@@ -23,17 +23,31 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins((PhysicsPlugins::default(), PhysicsDebugPlugin::default()))
-        .add_plugins((UIPlugin, ShipPlugin, BulletPlugin))
+        .add_plugins(PhysicsPlugins::default())
+        // .add_plugins(PhysicsDebugPlugin::default())
+        .add_plugins(UIPlugin)
+        .add_plugins(ShipPlugin)
+        .add_plugins(BulletPlugin)
         .init_resource::<CursorPosition>()
+        .add_systems(Startup, setup)
         .add_systems(
             Update,
             (
-                track_cursor_position,
+                track_cursor_position.run_if(on_event::<CursorMoved>),
                 close_window.run_if(input_just_pressed(KeyCode::KeyQ)),
             ),
         )
         .run();
+}
+
+fn setup(mut cmd: Commands) {
+    cmd.spawn((
+        Camera2d,
+        Projection::from(OrthographicProjection {
+            scale: 3.,
+            ..OrthographicProjection::default_2d()
+        }),
+    ));
 }
 
 #[derive(Resource, Default)]

@@ -48,13 +48,6 @@ pub struct Ship;
 pub struct Nozzle;
 
 fn setup(mut cmd: Commands, assets: Res<AssetServer>) {
-    cmd.spawn((
-        Camera2d,
-        Projection::from(OrthographicProjection {
-            scale: 3.,
-            ..OrthographicProjection::default_2d()
-        }),
-    ));
     cmd.insert_resource(FireCooldown(Timer::from_seconds(0.1, TimerMode::Repeating)));
 
     let ship_g = assets.load("ship_G.png");
