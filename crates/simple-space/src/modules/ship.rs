@@ -79,7 +79,7 @@ fn setup(mut cmd: Commands) {
                     ..default()
                 },
                 Fill::color(Color::WHITE.with_alpha(0.)),
-                Stroke::new(Color::WHITE, 5.),
+                Stroke::new(Color::WHITE, 3.),
             ));
             parent.spawn(Collider::triangle(point1, point2, point3));
             parent.spawn((Nozzle, Transform::from_xyz(100., 0., 0.)));
@@ -261,18 +261,11 @@ fn shoot_bullet_from_pool(
 
 fn shoot_bullet(
     mut cmd: Commands,
-    assets: Res<AssetServer>,
     ship: Single<Entity, With<Ship>>,
     mut transform: Query<&mut Transform>,
     nozzle: Single<&GlobalTransform, With<Nozzle>>,
 ) {
-    let image = assets.load("effect_yellow.png");
     let ship = transform.get_mut(*ship).unwrap();
     let angle = ship.rotation.to_euler(EulerRot::XYZ).2;
-    cmd.template::<Bullet>(BulletProp::Active(
-        image,
-        Color::WHITE,
-        angle,
-        nozzle.translation(),
-    ));
+    cmd.template::<Bullet>(BulletProp::Active(angle, nozzle.translation()));
 }

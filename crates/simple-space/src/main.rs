@@ -25,7 +25,7 @@ fn main() {
             ..default()
         }))
         .add_plugins(PhysicsPlugins::default())
-        .add_plugins(PhysicsDebugPlugin::default())
+        // .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(ShapePlugin)
         .add_plugins(UIPlugin)
         .add_plugins(ShipPlugin)
