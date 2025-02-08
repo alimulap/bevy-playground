@@ -3,6 +3,7 @@ use avian2d::{
     prelude::*,
 };
 use bevy::prelude::*;
+use bevy_prototype_lyon::prelude::*;
 use playground_ui::DebugLog;
 
 use crate::CursorPosition;
@@ -47,18 +48,39 @@ pub struct Ship;
 #[derive(Component)]
 pub struct Nozzle;
 
-fn setup(mut cmd: Commands, assets: Res<AssetServer>) {
+fn setup(mut cmd: Commands) {
     cmd.insert_resource(FireCooldown(Timer::from_seconds(0.1, TimerMode::Repeating)));
 
-    let ship_g = assets.load("ship_G.png");
+    let point1_length = 100.;
+    let point23_length = 50.;
+
+    let point1 = Vec2::new(0., point1_length);
+    let point2 = Vec2::new(
+        210f32.to_radians().cos() * point23_length,
+        210f32.to_radians().sin() * point23_length,
+    );
+    let point3 = Vec2::new(
+        330f32.to_radians().cos() * point23_length,
+        330f32.to_radians().sin() * point23_length,
+    );
+
+    let shape = shapes::Polygon {
+        points: vec![point1, point2, point3],
+        closed: true,
+    };
 
     cmd.insert_resource(RotateMethod::Cursor);
 
     cmd.spawn((Ship, MaxSpeed(1000.), RigidBody::Kinematic))
         .with_children(|parent| {
             parent.spawn((
-                Sprite::from_image(ship_g),
-                Transform::default().with_rotation(Quat::from_rotation_z(-(PI / 2.))),
+                ShapeBundle {
+                    path: GeometryBuilder::build_as(&shape),
+                    transform: Transform::from_rotation(Quat::from_rotation_z(-PI / 2.)),
+                    ..default()
+                },
+                Fill::color(Color::WHITE.with_alpha(0.)),
+                Stroke::new(Color::WHITE, 5.),
             ));
             parent.spawn((
                 Collider::compound(vec![

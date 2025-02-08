@@ -1,5 +1,6 @@
 use avian2d::prelude::*;
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
+use bevy_prototype_lyon::plugin::ShapePlugin;
 use modules::{BulletPlugin, ShipPlugin};
 use ui::UIPlugin;
 
@@ -25,6 +26,7 @@ fn main() {
         }))
         .add_plugins(PhysicsPlugins::default())
         // .add_plugins(PhysicsDebugPlugin::default())
+        .add_plugins(ShapePlugin)
         .add_plugins(UIPlugin)
         .add_plugins(ShipPlugin)
         .add_plugins(BulletPlugin)

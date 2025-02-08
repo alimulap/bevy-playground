@@ -11,3 +11,4 @@ toml = { workspace = true }
 fastrand = { workspace = true }
 bevy_simple_text_input = { workspace = true }
 avian2d = { workspace = true }
+bevy_prototype_lyon = { workspace = true }
