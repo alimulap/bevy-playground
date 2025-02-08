@@ -67,7 +67,7 @@ impl Template for Bullet {
                         Fill::color(Color::WHITE.with_alpha(0.)),
                         Stroke::new(Color::WHITE, 3.),
                     ));
-                    parent.spawn((Collider::regular_polygon(10., 3), Sensor));
+                    parent.spawn((Collider::regular_polygon(17., 3), Sensor));
                 })
                 .id(),
             BulletProp::Inactive => cmd
@@ -90,7 +90,7 @@ impl Template for Bullet {
                         Fill::color(Color::WHITE.with_alpha(0.)),
                         Stroke::new(Color::WHITE, 3.),
                     ));
-                    parent.spawn((Collider::regular_polygon(10., 3), Sensor));
+                    parent.spawn((Collider::regular_polygon(17., 3), Sensor));
                 })
                 .id(),
         }
