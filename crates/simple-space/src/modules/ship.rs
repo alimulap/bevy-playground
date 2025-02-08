@@ -54,14 +54,14 @@ fn setup(mut cmd: Commands) {
     let point1_length = 100.;
     let point23_length = 50.;
 
-    let point1 = Vec2::new(0., point1_length);
+    let point1 = Vec2::new(point1_length, 0.);
     let point2 = Vec2::new(
-        210f32.to_radians().cos() * point23_length,
-        210f32.to_radians().sin() * point23_length,
+        120f32.to_radians().cos() * point23_length,
+        120f32.to_radians().sin() * point23_length,
     );
     let point3 = Vec2::new(
-        330f32.to_radians().cos() * point23_length,
-        330f32.to_radians().sin() * point23_length,
+        240f32.to_radians().cos() * point23_length,
+        240f32.to_radians().sin() * point23_length,
     );
 
     let shape = shapes::Polygon {
@@ -76,44 +76,12 @@ fn setup(mut cmd: Commands) {
             parent.spawn((
                 ShapeBundle {
                     path: GeometryBuilder::build_as(&shape),
-                    transform: Transform::from_rotation(Quat::from_rotation_z(-PI / 2.)),
                     ..default()
                 },
                 Fill::color(Color::WHITE.with_alpha(0.)),
                 Stroke::new(Color::WHITE, 5.),
             ));
-            parent.spawn((
-                Collider::compound(vec![
-                    (
-                        Position::new(Vec2::default()),
-                        Rotation::default(),
-                        Collider::triangle(
-                            Vector::new(50., 0.),
-                            Vector::new(-31., -48.),
-                            Vector::new(-31., 48.),
-                        ),
-                    ),
-                    (
-                        Position::new(Vec2::new(-31., -32.)),
-                        Rotation::default(),
-                        Collider::triangle(
-                            Vector::new(0., -17.),
-                            Vector::new(0., 17.),
-                            Vector::new(-17., 0.),
-                        ),
-                    ),
-                    (
-                        Position::new(Vec2::new(-31., 32.)),
-                        Rotation::default(),
-                        Collider::triangle(
-                            Vector::new(0., -17.),
-                            Vector::new(0., 17.),
-                            Vector::new(-17., 0.),
-                        ),
-                    ),
-                ]),
-                DebugRender::default(),
-            ));
+            parent.spawn(Collider::triangle(point1, point2, point3));
             parent.spawn((Nozzle, Transform::from_xyz(50., 0., 0.)));
         });
 }
