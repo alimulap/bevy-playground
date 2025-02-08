@@ -82,7 +82,7 @@ fn setup(mut cmd: Commands) {
                 Stroke::new(Color::WHITE, 5.),
             ));
             parent.spawn(Collider::triangle(point1, point2, point3));
-            parent.spawn((Nozzle, Transform::from_xyz(50., 0., 0.)));
+            parent.spawn((Nozzle, Transform::from_xyz(100., 0., 0.)));
         });
 }
 
