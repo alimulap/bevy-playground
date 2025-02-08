@@ -124,39 +124,76 @@ pub struct MaxSpeed(f32);
 fn ship_strafe(
     keyboard: Res<ButtonInput<KeyCode>>,
     ship: Single<(&mut LinearVelocity, &MaxSpeed), With<Ship>>,
+    mut progress: Local<f32>,
+    mut last_direction: Local<Vector>, // Track the previous input direction
+    time: Res<Time>,
 ) {
     let (mut linvel, max_speed) = ship.into_inner();
-    let mut direction = Vector::ZERO;
+    let mut input_direction = Vector::ZERO;
+
+    // Horizontal input
     match (
         keyboard.pressed(KeyCode::KeyD),
         keyboard.pressed(KeyCode::KeyA),
     ) {
-        (true, false) => direction.x = 1.0f32,
-        (false, true) => direction.x = -1.0f32,
-        _ => (),
+        (true, false) => input_direction.x = 1.0,
+        (false, true) => input_direction.x = -1.0,
+        _ => {}
     }
+
+    // Vertical input
     match (
         keyboard.pressed(KeyCode::KeyW),
         keyboard.pressed(KeyCode::KeyS),
     ) {
-        (true, false) => direction.y = 1.0f32,
-        (false, true) => direction.y = -1.0f32,
-        _ => (),
+        (true, false) => input_direction.y = 1.0,
+        (false, true) => input_direction.y = -1.0,
+        _ => {}
     }
 
-    let linve_magnitude = linvel.0.length();
-
-    if direction != Vector::ZERO {
-        if linve_magnitude <= max_speed.0 {
-            direction = direction.normalize() * 1000.;
-            linvel.0 = linvel.0.lerp(direction, 0.1);
-        } else {
-            linvel.0 = linvel.0.normalize() * max_speed.0;
+    // Reset progress if the input direction changes significantly.
+    if input_direction != Vector::ZERO {
+        input_direction = input_direction.normalize();
+        if input_direction != *last_direction {
+            *progress = 0.0;
+            *last_direction = input_direction;
         }
-    } else if linve_magnitude > 0.1 {
-        linvel.0 = linvel.0.lerp(Vector::ZERO, 0.1);
+    }
+
+    // Ease out expo function
+    fn ease_out_expo(t: f32) -> f32 {
+        if t >= 1.0 {
+            1.0
+        } else {
+            1.0 - 2.0f32.powf(-10.0 * t)
+        }
+    }
+
+    // Define a fixed acceleration duration (in seconds)
+    let accel_duration = 0.5;
+
+    // Update progress based on whether there's input
+    if input_direction != Vector::ZERO {
+        *progress += time.delta().as_secs_f32() / 2.;
+        let t_normalized = (*progress / accel_duration).clamp(0.0, 1.0);
+        let alpha = ease_out_expo(t_normalized);
+
+        // Calculate target velocity based on max speed and input direction.
+        let target_velocity = input_direction * max_speed.0;
+
+        // Smoothly interpolate from current velocity to target velocity.
+        linvel.0 = linvel.0.lerp(target_velocity, alpha);
     } else {
-        linvel.0 = Vector::ZERO;
+        // No input: Decelerate smoothly
+        linvel.0 = linvel.0.lerp(Vector::ZERO, 0.1);
+        // Optionally reset progress more quickly when stopping.
+        *progress = (*progress * 0.9).min(0.01);
+        *last_direction = Vector::ZERO;
+    }
+
+    // Optionally, clamp velocity to max speed if overshooting.
+    if linvel.0.length() > max_speed.0 {
+        linvel.0 = linvel.0.normalize() * max_speed.0;
     }
 }
 
