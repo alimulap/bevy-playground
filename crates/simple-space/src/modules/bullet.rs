@@ -41,6 +41,15 @@ pub enum BulletProp {
 impl Template for Bullet {
     type Prop = BulletProp;
     fn construct(cmd: &mut Commands, prop: Self::Prop) -> Entity {
+        let point1 = Vec2::new(0., 13.);
+        let point2 = Vec2::new(
+            210f32.to_radians().cos() * 13.,
+            210f32.to_radians().sin() * 13.,
+        );
+        let point3 = Vec2::new(
+            330f32.to_radians().cos() * 13.,
+            330f32.to_radians().sin() * 13.,
+        );
         match prop {
             BulletProp::Active(angle, nozzle_position) => cmd
                 .spawn((
@@ -57,10 +66,9 @@ impl Template for Bullet {
                 .with_children(|parent| {
                     parent.spawn((
                         ShapeBundle {
-                            path: GeometryBuilder::build_as(&shapes::RegularPolygon {
-                                sides: 3,
-                                feature: shapes::RegularPolygonFeature::Radius(17.),
-                                ..default()
+                            path: GeometryBuilder::build_as(&shapes::Polygon {
+                                points: vec![point3, point1, point2],
+                                closed: false,
                             }),
                             ..default()
                         },
@@ -80,10 +88,9 @@ impl Template for Bullet {
                 .with_children(|parent| {
                     parent.spawn((
                         ShapeBundle {
-                            path: GeometryBuilder::build_as(&shapes::RegularPolygon {
-                                sides: 3,
-                                feature: shapes::RegularPolygonFeature::Radius(17.),
-                                ..default()
+                            path: GeometryBuilder::build_as(&shapes::Polygon {
+                                points: vec![point3, point1, point2],
+                                closed: false,
                             }),
                             ..default()
                         },
