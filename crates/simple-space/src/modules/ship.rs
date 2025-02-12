@@ -71,19 +71,26 @@ fn setup(mut cmd: Commands) {
 
     cmd.insert_resource(RotateMethod::Cursor);
 
-    cmd.spawn((Ship, MaxSpeed(1000.), RigidBody::Kinematic))
-        .with_children(|parent| {
-            parent.spawn((
-                ShapeBundle {
-                    path: GeometryBuilder::build_as(&shape),
-                    ..default()
-                },
-                Fill::color(Color::WHITE.with_alpha(0.)),
-                Stroke::new(Color::WHITE, 3.),
-            ));
-            parent.spawn(Collider::triangle(point1, point2, point3));
-            parent.spawn((Nozzle, Transform::from_xyz(100., 0., 0.)));
-        });
+    cmd.spawn((
+        Ship,
+        MaxSpeed(1000.),
+        RigidBody::Dynamic,
+        GravityScale(0.),
+        SweptCcd::default(),
+        LockedAxes::ROTATION_LOCKED,
+    ))
+    .with_children(|parent| {
+        parent.spawn((
+            ShapeBundle {
+                path: GeometryBuilder::build_as(&shape),
+                ..default()
+            },
+            Fill::color(Color::WHITE.with_alpha(0.)),
+            Stroke::new(Color::WHITE, 3.),
+        ));
+        parent.spawn(Collider::triangle(point1, point2, point3));
+        parent.spawn((Nozzle, Transform::from_xyz(100., 0., 0.)));
+    });
 }
 
 #[derive(Component)]
