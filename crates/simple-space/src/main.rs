@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 use bevy_prototype_lyon::plugin::ShapePlugin;
-use modules::{BulletPlugin, ShipPlugin};
+use modules::{BlockPlugin, BulletPlugin, ShipPlugin};
 use ui::UIPlugin;
 
 pub const WINDOW_HEIGHT: f32 = 600.;
@@ -24,12 +24,13 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins(PhysicsPlugins::default())
+        .add_plugins(PhysicsPlugins::default().with_length_unit(20.))
         .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(ShapePlugin)
         .add_plugins(UIPlugin)
         .add_plugins(ShipPlugin)
         .add_plugins(BulletPlugin)
+        .add_plugins(BlockPlugin)
         .init_resource::<CursorPosition>()
         .add_systems(Startup, setup)
         .add_systems(
