@@ -1,12 +1,14 @@
 use avian2d::prelude::*;
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 use bevy_prototype_lyon::plugin::ShapePlugin;
-use modules::{BlockPlugin, BulletPlugin, ShipPlugin};
+use bevy_rand::{plugin::EntropyPlugin, prelude::WyRand};
+use modules::*;
 use ui::UIPlugin;
 
 pub const WINDOW_HEIGHT: f32 = 600.;
 pub const WINDOW_WIDTH: f32 = 900.;
 
+mod constant;
 mod modules;
 mod ui;
 
@@ -25,12 +27,14 @@ fn main() {
             ..default()
         }))
         .add_plugins(PhysicsPlugins::default().with_length_unit(20.))
-        .add_plugins(PhysicsDebugPlugin::default())
+        // .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(ShapePlugin)
         .add_plugins(UIPlugin)
         .add_plugins(ShipPlugin)
         .add_plugins(BulletPlugin)
         .add_plugins(BlockPlugin)
+        .add_plugins(AsteroidPlugin)
+        .add_plugins(EntropyPlugin::<WyRand>::default())
         .init_resource::<CursorPosition>()
         .add_systems(Startup, setup)
         .add_systems(

@@ -20,15 +20,18 @@ impl Plugin for BlockPlugin {
 fn setup(mut cmd: Commands) {
     let mut pool = ObjectPool::<Block>::new();
 
-    for _ in 0..20 {
-        pool.put(cmd.template::<Block>(BlockProp::inactive(Vec2::ZERO)).id());
+    for _ in 0..0 {
+        pool.put(
+            cmd.template::<Block>(BlockProp::new(Vec2::ZERO, false))
+                .id(),
+        );
     }
 
     cmd.insert_resource(pool);
 }
 
 #[derive(Component)]
-// #[require(Transform)]
+#[require(Transform)]
 pub struct Block;
 
 impl PoolMarker for Block {}
@@ -39,18 +42,8 @@ pub struct BlockProp {
 }
 
 impl BlockProp {
-    pub fn active(position: Vec2) -> Self {
-        Self {
-            active: true,
-            position,
-        }
-    }
-
-    pub fn inactive(position: Vec2) -> Self {
-        Self {
-            active: false,
-            position,
-        }
+    pub fn new(position: Vec2, active: bool) -> Self {
+        Self { active, position }
     }
 }
 

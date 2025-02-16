@@ -23,6 +23,8 @@ fastrand = "2.3.0"
 bevy_simple_text_input = { git = "https://github.com/alimulap/bevy_simple_text_input" }
 avian2d = "0.2.1"
 bevy_prototype_lyon = "0.13.0"
+rand_core = "0.6"
+bevy_rand = { version = "0.9", features = ["rand_chacha", "wyrand"] }
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]
