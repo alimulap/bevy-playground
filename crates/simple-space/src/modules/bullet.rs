@@ -19,7 +19,7 @@ fn setup(mut cmd: Commands) {
     let mut pool = ObjectPool::<YellowBullet>::new();
 
     for _ in 0..20 {
-        pool.put(cmd.template::<Bullet>(BulletProp::Inactive));
+        pool.put(cmd.template::<Bullet>(BulletProp::Inactive).id());
     }
 
     cmd.insert_resource(pool);
@@ -40,7 +40,7 @@ pub enum BulletProp {
 
 impl Template for Bullet {
     type Prop = BulletProp;
-    fn construct(cmd: &mut Commands, prop: Self::Prop) -> Entity {
+    fn construct(mut cmd: EntityCommands<'_>, prop: Self::Prop) -> EntityCommands<'_> {
         let point1 = Vec2::new(0., 13.);
         let point2 = Vec2::new(
             210f32.to_radians().cos() * 13.,
@@ -52,7 +52,7 @@ impl Template for Bullet {
         );
         match prop {
             BulletProp::Active(angle, nozzle_position) => cmd
-                .spawn((
+                .insert((
                     Bullet,
                     RigidBody::Kinematic,
                     LinearVelocity(Vec2 {
@@ -76,10 +76,9 @@ impl Template for Bullet {
                         Stroke::new(Color::WHITE, 3.),
                     ));
                     parent.spawn((Collider::regular_polygon(17., 3), Sensor));
-                })
-                .id(),
+                }),
             BulletProp::Inactive => cmd
-                .spawn((
+                .insert((
                     Bullet,
                     RigidBody::Kinematic,
                     RigidBodyDisabled,
@@ -98,8 +97,8 @@ impl Template for Bullet {
                         Stroke::new(Color::WHITE, 3.),
                     ));
                     parent.spawn((Collider::regular_polygon(17., 3), Sensor));
-                })
-                .id(),
-        }
+                }),
+        };
+        cmd
     }
 }

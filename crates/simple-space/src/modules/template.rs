@@ -2,15 +2,23 @@ use bevy::prelude::*;
 
 pub trait Template {
     type Prop;
-    fn construct(cmd: &mut Commands, prop: Self::Prop) -> Entity;
+    fn construct(cmd: EntityCommands<'_>, prop: Self::Prop) -> EntityCommands<'_>;
 }
 
 pub trait TemplateExt {
-    fn template<T: Template>(&mut self, prop: T::Prop) -> Entity;
+    fn template<T: Template>(&mut self, prop: T::Prop) -> EntityCommands<'_>;
 }
 
 impl TemplateExt for Commands<'_, '_> {
-    fn template<T: Template>(&mut self, prop: T::Prop) -> Entity {
-        T::construct(self, prop)
+    fn template<T: Template>(&mut self, prop: T::Prop) -> EntityCommands<'_> {
+        let cmd = self.spawn_empty();
+        T::construct(cmd, prop)
+    }
+}
+
+impl<'a> TemplateExt for ChildBuilder<'a> {
+    fn template<T: Template>(&mut self, prop: T::Prop) -> EntityCommands<'_> {
+        let cmd = self.spawn_empty();
+        T::construct(cmd, prop)
     }
 }

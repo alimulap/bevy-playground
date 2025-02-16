@@ -21,7 +21,7 @@ fn setup(mut cmd: Commands) {
     let mut pool = ObjectPool::<Block>::new();
 
     for _ in 0..20 {
-        pool.put(cmd.template::<Block>(BlockProp::inactive(Vec2::ZERO)));
+        pool.put(cmd.template::<Block>(BlockProp::inactive(Vec2::ZERO)).id());
     }
 
     cmd.insert_resource(pool);
@@ -33,20 +33,20 @@ pub struct Block;
 
 impl PoolMarker for Block {}
 
-struct BlockProp {
+pub struct BlockProp {
     active: bool,
     position: Vec2,
 }
 
 impl BlockProp {
-    fn active(position: Vec2) -> Self {
+    pub fn active(position: Vec2) -> Self {
         Self {
             active: true,
             position,
         }
     }
 
-    fn inactive(position: Vec2) -> Self {
+    pub fn inactive(position: Vec2) -> Self {
         Self {
             active: false,
             position,
@@ -56,8 +56,8 @@ impl BlockProp {
 
 impl Template for Block {
     type Prop = BlockProp;
-    fn construct(cmd: &mut Commands, prop: Self::Prop) -> Entity {
-        let mut entt = cmd.spawn((
+    fn construct(mut cmd: EntityCommands<'_>, prop: Self::Prop) -> EntityCommands<'_> {
+        cmd.insert((
             Block,
             ShapeBundle {
                 path: GeometryBuilder::build_as(&shapes::Rectangle {
@@ -76,9 +76,9 @@ impl Template for Block {
         ));
 
         if !prop.active {
-            entt.insert((Visibility::Hidden, ColliderDisabled));
+            cmd.insert((Visibility::Hidden, ColliderDisabled));
         }
 
-        entt.id()
+        cmd
     }
 }
