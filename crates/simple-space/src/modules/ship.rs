@@ -179,7 +179,7 @@ pub enum RotateMethod {
 }
 
 fn switch_key_pressed(keyboard: Res<ButtonInput<KeyCode>>) -> bool {
-    keyboard.just_pressed(KeyCode::KeyY)
+    keyboard.just_pressed(KeyCode::ShiftRight)
 }
 
 fn switch_rotate_method(mut rotate_method: ResMut<RotateMethod>) {
@@ -214,10 +214,10 @@ fn rotate_with_keyboard(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut ship: Single<(&mut Transform, &GlobalTransform), With<Ship>>,
 ) {
-    if keyboard.pressed(KeyCode::KeyK) {
+    if keyboard.pressed(KeyCode::ArrowRight) {
         ship.0.rotate_local_z(-0.1);
     }
-    if keyboard.pressed(KeyCode::KeyN) {
+    if keyboard.pressed(KeyCode::ArrowLeft) {
         ship.0.rotate_local_z(0.1);
     }
 }
@@ -229,7 +229,10 @@ fn fire_button_pressed(
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
 ) -> bool {
-    keyboard.pressed(KeyCode::KeyJ) || mouse.pressed(MouseButton::Left)
+    keyboard.pressed(KeyCode::KeyJ)
+        || mouse.pressed(MouseButton::Left)
+        || keyboard.pressed(KeyCode::ArrowUp)
+        || keyboard.pressed(KeyCode::ArrowDown)
 }
 
 fn fire_tick(mut fire_cooldown: ResMut<FireCooldown>, time: Res<Time>) {
