@@ -20,6 +20,7 @@ impl Plugin for BlockPlugin {
 fn setup(mut cmd: Commands) {
     let mut pool = ObjectPool::<Block>::new();
 
+    #[allow(clippy::reversed_empty_ranges)]
     for _ in 0..0 {
         pool.put(
             cmd.template::<Block>(BlockProp::new(Vec2::ZERO, false))

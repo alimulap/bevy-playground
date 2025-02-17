@@ -94,7 +94,7 @@ fn setup(mut cmd: Commands) {
 }
 
 #[derive(Component)]
-pub struct MaxSpeed(f32);
+pub struct MaxSpeed(pub f32);
 
 fn ship_strafe(
     keyboard: Res<ButtonInput<KeyCode>>,

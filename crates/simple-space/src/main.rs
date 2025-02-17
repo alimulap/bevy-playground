@@ -34,6 +34,7 @@ fn main() {
         .add_plugins(BulletPlugin)
         .add_plugins(BlockPlugin)
         .add_plugins(AsteroidPlugin)
+        .add_plugins(EnemyPlugin)
         .add_plugins(EntropyPlugin::<WyRand>::default())
         .init_resource::<CursorPosition>()
         .add_systems(Startup, setup)
