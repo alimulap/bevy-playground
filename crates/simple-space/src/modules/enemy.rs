@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
 
 use super::{
+    physics::GameLayer,
     ship::MaxSpeed,
     template::{Template, TemplateExt},
 };
@@ -48,7 +49,18 @@ impl Template for Enemy {
                 Fill::color(Color::WHITE.with_alpha(0.)),
                 Stroke::new(Color::WHITE, 3.),
             ));
-            parent.spawn(Collider::regular_polygon(60., 6));
+            parent.spawn((
+                Collider::regular_polygon(60., 6),
+                CollisionLayers::new(
+                    GameLayer::Enemy,
+                    [
+                        GameLayer::Default,
+                        GameLayer::Block,
+                        GameLayer::Bullet,
+                        GameLayer::Player,
+                    ],
+                ),
+            ));
         });
         cmd
     }

@@ -31,8 +31,6 @@ fn main() {
         .add_plugins(ShapePlugin)
         .add_plugins(UIPlugin)
         .add_plugins(ShipPlugin)
-        .add_plugins(BulletPlugin)
-        .add_plugins(BlockPlugin)
         .add_plugins(AsteroidPlugin)
         .add_plugins(EnemyPlugin)
         .add_plugins(EntropyPlugin::<WyRand>::default())

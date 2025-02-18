@@ -14,3 +14,8 @@ avian2d = { workspace = true }
 bevy_prototype_lyon = { workspace = true }
 rand_core = { workspace = true }
 bevy_rand = { workspace = true }
+
+
+# [lints.clippy]
+# too_many_arguments = "allow"
+# type_complexity = "allow"

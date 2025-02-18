@@ -22,13 +22,12 @@ fn setup(mut cmd: Commands, rng: GlobalEntropy<WyRand>) {
     cmd.spawn((Asteroid, Transform::from_xyz(300., 300., 0.)))
         .with_children(|parent| {
             for (x, y) in asteroid_blocks {
-                parent.template::<Block>(BlockProp::new(
-                    Vec2::new(
+                parent.template::<Block>(BlockProp {
+                    position: Vec2::new(
                         x as f32 * constant::BLOCK_SIZE,
                         y as f32 * constant::BLOCK_SIZE,
                     ),
-                    true,
-                ));
+                });
             }
         });
 }

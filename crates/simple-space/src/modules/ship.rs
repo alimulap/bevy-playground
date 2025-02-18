@@ -1,7 +1,4 @@
-use avian2d::{
-    math::{PI, Vector},
-    prelude::*,
-};
+use avian2d::{math::Vector, prelude::*};
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
 use playground_ui::DebugLog;
@@ -9,8 +6,10 @@ use playground_ui::DebugLog;
 use crate::CursorPosition;
 
 use super::{
-    bullet::{Bullet, BulletProp, YellowBullet},
-    object_pool::{ObjectPool, pool_empty},
+    block::Block,
+    bullet::{Bullet, BulletProp, BulletType},
+    enemy::Enemy,
+    physics::GameLayer,
     template::TemplateExt,
 };
 
@@ -26,16 +25,8 @@ impl Plugin for ShipPlugin {
                 look_at_cursor.run_if(resource_equals(RotateMethod::Cursor)),
                 rotate_with_keyboard.run_if(resource_equals(RotateMethod::Keyboard)),
                 fire_tick,
-                shoot_bullet_from_pool.run_if(
-                    fire_button_pressed
-                        .and(can_fire)
-                        .and(not(pool_empty::<YellowBullet>)),
-                ),
-                shoot_bullet.run_if(
-                    fire_button_pressed
-                        .and(can_fire)
-                        .and(pool_empty::<YellowBullet>),
-                ),
+                shoot_bullet.run_if(fire_button_pressed.and(can_fire)),
+                despawn_bullets,
             ),
         );
     }
@@ -78,6 +69,11 @@ fn setup(mut cmd: Commands) {
         GravityScale(0.),
         SweptCcd::default(),
         LockedAxes::ROTATION_LOCKED,
+        Collider::triangle(point1, point2, point3),
+        CollisionLayers::new(
+            GameLayer::Player,
+            [GameLayer::Default, GameLayer::Block, GameLayer::Enemy],
+        ),
     ))
     .with_children(|parent| {
         parent.spawn((
@@ -88,7 +84,6 @@ fn setup(mut cmd: Commands) {
             Fill::color(Color::WHITE.with_alpha(0.)),
             Stroke::new(Color::WHITE, 3.),
         ));
-        parent.spawn(Collider::triangle(point1, point2, point3));
         parent.spawn((Nozzle, Transform::from_xyz(100., 0., 0.)));
     });
 }
@@ -193,7 +188,7 @@ fn look_at_cursor(
     cursor_position: Res<CursorPosition>,
     camera: Single<(&Camera, &GlobalTransform)>,
     mut ship: Single<(&mut Transform, &GlobalTransform), With<Ship>>,
-    mut debug_log: ResMut<DebugLog>,
+    // mut debug_log: ResMut<DebugLog>,
 ) {
     let cursor_position = cursor_position.0;
     let ship_on_viewport = camera
@@ -204,10 +199,10 @@ fn look_at_cursor(
         (ship_on_viewport.y - cursor_position.y).atan2(cursor_position.x - ship_on_viewport.x);
     ship.0.rotation =
         Quat::from(Rotation::from(ship.0.rotation).nlerp(Rotation::radians(angle), 0.5));
-    debug_log.push(format!(
-        "ship rotation: {:.2?}",
-        ship.0.rotation.to_euler(EulerRot::XYZ)
-    ));
+    // debug_log.push(format!(
+    //     "ship rotation: {:.2?}",
+    //     ship.0.rotation.to_euler(EulerRot::XYZ)
+    // ));
 }
 
 fn rotate_with_keyboard(
@@ -243,30 +238,11 @@ fn can_fire(fire_cooldown: Res<FireCooldown>) -> bool {
     fire_cooldown.0.just_finished()
 }
 
-fn shoot_bullet_from_pool(
-    mut cmd: Commands,
-    mut pool: ResMut<ObjectPool<YellowBullet>>,
-    mut bullet: Query<(&mut LinearVelocity, &mut Visibility), With<Bullet>>,
-    ship: Single<Entity, With<Ship>>,
-    mut transform: Query<&mut Transform>,
-    nozzle: Single<&GlobalTransform, With<Nozzle>>,
-) {
-    let bullet_id = pool.get().unwrap();
-    let (mut linvel, mut visibility) = bullet.get_mut(bullet_id).unwrap();
-
-    let ship = transform.get_mut(*ship).unwrap();
-    let angle = ship.rotation.to_euler(EulerRot::XYZ).2;
-
-    let mut transform = transform.get_mut(bullet_id).unwrap();
-    transform.translation = nozzle.translation();
-    transform.rotation = Quat::from_rotation_z(angle - PI / 2.);
-    *visibility = Visibility::Visible;
-
-    cmd.entity(bullet_id).remove::<RigidBodyDisabled>();
-    linvel.0 = Vec2 {
-        x: angle.cos() * 2000.,
-        y: angle.sin() * 2000.,
-    };
+fn ship_bullet_layers() -> CollisionLayers {
+    CollisionLayers::new(
+        GameLayer::Bullet,
+        [GameLayer::Default, GameLayer::Block, GameLayer::Enemy],
+    )
 }
 
 fn shoot_bullet(
@@ -277,5 +253,31 @@ fn shoot_bullet(
 ) {
     let ship = transform.get_mut(*ship).unwrap();
     let angle = ship.rotation.to_euler(EulerRot::XYZ).2;
-    cmd.template::<Bullet>(BulletProp::Active(angle, nozzle.translation()));
+    cmd.template::<Bullet>(BulletProp {
+        rotation: angle,
+        position: nozzle.translation(),
+        bullet_type: BulletType::Standard,
+        layers: ship_bullet_layers(),
+    });
+}
+
+fn despawn_bullets(
+    mut cmd: Commands,
+    bullets: Query<(Entity, Ref<CollidingEntities>), (With<Bullet>, Changed<CollidingEntities>)>,
+    enemy: Query<Has<Enemy>>,
+    block: Query<Has<Block>>,
+    mut debug_log: ResMut<DebugLog>,
+) {
+    for (id, entities) in bullets.iter() {
+        let mut should_despawn = false;
+        for entity in entities.iter() {
+            debug_log.push(format!("Bullet collided with entity {:?}", entity));
+            if enemy.get(*entity).is_ok() || block.get(*entity).is_ok() {
+                should_despawn = true;
+            }
+        }
+        if should_despawn {
+            cmd.entity(id).despawn_recursive();
+        }
+    }
 }

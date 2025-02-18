@@ -16,7 +16,7 @@ impl TemplateExt for Commands<'_, '_> {
     }
 }
 
-impl<'a> TemplateExt for ChildBuilder<'a> {
+impl TemplateExt for ChildBuilder<'_> {
     fn template<T: Template>(&mut self, prop: T::Prop) -> EntityCommands<'_> {
         let cmd = self.spawn_empty();
         T::construct(cmd, prop)

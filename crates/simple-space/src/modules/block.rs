@@ -4,48 +4,14 @@ use bevy_prototype_lyon::prelude::*;
 
 use crate::constant;
 
-use super::{
-    object_pool::{ObjectPool, PoolMarker},
-    template::{Template, TemplateExt},
-};
-
-pub struct BlockPlugin;
-
-impl Plugin for BlockPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup);
-    }
-}
-
-fn setup(mut cmd: Commands) {
-    let mut pool = ObjectPool::<Block>::new();
-
-    #[allow(clippy::reversed_empty_ranges)]
-    for _ in 0..0 {
-        pool.put(
-            cmd.template::<Block>(BlockProp::new(Vec2::ZERO, false))
-                .id(),
-        );
-    }
-
-    cmd.insert_resource(pool);
-}
+use super::{physics::GameLayer, template::Template};
 
 #[derive(Component)]
 #[require(Transform)]
 pub struct Block;
 
-impl PoolMarker for Block {}
-
 pub struct BlockProp {
-    active: bool,
-    position: Vec2,
-}
-
-impl BlockProp {
-    pub fn new(position: Vec2, active: bool) -> Self {
-        Self { active, position }
-    }
+    pub position: Vec2,
 }
 
 impl Template for Block {
@@ -65,13 +31,18 @@ impl Template for Block {
             Fill::color(Color::WHITE.with_alpha(0.)),
             Stroke::new(Color::WHITE, 3.),
             Collider::rectangle(constant::BLOCK_SIZE, constant::BLOCK_SIZE),
+            CollisionLayers::new(
+                GameLayer::Block,
+                [
+                    GameLayer::Default,
+                    GameLayer::Player,
+                    GameLayer::Enemy,
+                    GameLayer::Bullet,
+                ],
+            ),
             RigidBody::Static,
             SweptCcd::default(),
         ));
-
-        if !prop.active {
-            cmd.insert((Visibility::Hidden, ColliderDisabled));
-        }
 
         cmd
     }

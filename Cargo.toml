@@ -47,3 +47,7 @@ opt-level = "z"   # Optimize for size.
 lto = true
 codegen-units = 1
 panic = "abort"
+#
+# [workspace.lints.clippy]
+# too_many_arguments = "allow"
+# type_complexity = "allow"

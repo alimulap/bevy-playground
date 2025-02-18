@@ -2,40 +2,22 @@ use avian2d::{math::PI, prelude::*};
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
 
-use super::{
-    object_pool::{ObjectPool, PoolMarker},
-    template::{Template, TemplateExt},
-};
-
-pub struct BulletPlugin;
-
-impl Plugin for BulletPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup);
-    }
-}
-
-fn setup(mut cmd: Commands) {
-    let mut pool = ObjectPool::<YellowBullet>::new();
-
-    for _ in 0..20 {
-        pool.put(cmd.template::<Bullet>(BulletProp::Inactive).id());
-    }
-
-    cmd.insert_resource(pool);
-}
+use super::template::Template;
 
 #[derive(Component, Clone)]
 #[require(Transform, Visibility)]
 pub struct Bullet;
 
-pub struct YellowBullet;
+#[derive(Component)]
+pub enum BulletType {
+    Standard,
+}
 
-impl PoolMarker for YellowBullet {}
-
-pub enum BulletProp {
-    Active(f32, Vec3),
-    Inactive,
+pub struct BulletProp {
+    pub rotation: f32,
+    pub position: Vec3,
+    pub bullet_type: BulletType,
+    pub layers: CollisionLayers,
 }
 
 impl Template for Bullet {
@@ -50,55 +32,46 @@ impl Template for Bullet {
             330f32.to_radians().cos() * 13.,
             330f32.to_radians().sin() * 13.,
         );
-        match prop {
-            BulletProp::Active(angle, nozzle_position) => cmd
-                .insert((
-                    Bullet,
-                    RigidBody::Kinematic,
-                    LinearVelocity(Vec2 {
-                        x: angle.cos() * 2000.,
-                        y: angle.sin() * 2000.,
+
+        let BulletProp {
+            rotation,
+            position,
+            bullet_type,
+            layers,
+        } = prop;
+
+        cmd.insert((
+            Bullet,
+            bullet_type,
+            RigidBody::Kinematic,
+            LinearVelocity(Vec2 {
+                x: rotation.cos() * 2000.,
+                y: rotation.sin() * 2000.,
+            }),
+            Transform::default()
+                .with_translation(position)
+                .with_rotation(Quat::from_rotation_z(rotation - PI / 2.)),
+            Collider::regular_polygon(17., 3),
+            Sensor,
+            layers,
+            CollidingEntities::default(),
+            // CollisionLayers::new( GameLayer::Bullet,
+            //     [GameLayer::Default, GameLayer::Block, GameLayer::Enemy],
+            // ),
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                ShapeBundle {
+                    path: GeometryBuilder::build_as(&shapes::Polygon {
+                        points: vec![point3, point1, point2],
+                        closed: false,
                     }),
-                    Transform::default()
-                        .with_translation(nozzle_position)
-                        .with_rotation(Quat::from_rotation_z(angle - PI / 2.)),
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        ShapeBundle {
-                            path: GeometryBuilder::build_as(&shapes::Polygon {
-                                points: vec![point3, point1, point2],
-                                closed: false,
-                            }),
-                            ..default()
-                        },
-                        Fill::color(Color::WHITE.with_alpha(0.)),
-                        Stroke::new(Color::WHITE, 3.),
-                    ));
-                    parent.spawn((Collider::regular_polygon(17., 3), Sensor));
-                }),
-            BulletProp::Inactive => cmd
-                .insert((
-                    Bullet,
-                    RigidBody::Kinematic,
-                    RigidBodyDisabled,
-                    Visibility::Hidden,
-                ))
-                .with_children(|parent| {
-                    parent.spawn((
-                        ShapeBundle {
-                            path: GeometryBuilder::build_as(&shapes::Polygon {
-                                points: vec![point3, point1, point2],
-                                closed: false,
-                            }),
-                            ..default()
-                        },
-                        Fill::color(Color::WHITE.with_alpha(0.)),
-                        Stroke::new(Color::WHITE, 3.),
-                    ));
-                    parent.spawn((Collider::regular_polygon(17., 3), Sensor));
-                }),
-        };
+                    ..default()
+                },
+                Fill::color(Color::WHITE.with_alpha(0.)),
+                Stroke::new(Color::WHITE, 3.),
+            ));
+        });
         cmd
     }
 }
