@@ -89,7 +89,6 @@ struct TrailSpawnTimer(Timer);
 #[derive(Component)]
 struct TrailTimeout(Timer);
 
-#[allow(clippy::too_many_arguments)]
 fn spawner(
     mut cmd: Commands,
     time: Res<Time>,

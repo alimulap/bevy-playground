@@ -3,8 +3,9 @@ use std::str::FromStr;
 use bevy::prelude::*;
 use bevy_simple_text_input::TextInputValue;
 use playground_ui::{
-    DebugPanelText, Header, InputField, InputFieldLabel, InputFieldType, InputUISubmitEvent,
-    InputUInitialValue, MaxWidth, Panel, PanelTitle, PlaygroundUIPlugin, TextUI,
+    DebugLog, DebugPanelText, Header, InputField, InputFieldLabel, InputFieldType,
+    InputUISubmitEvent, InputUInitialValue, MaxWidth, Panel, PanelTitle, PlaygroundUIPlugin,
+    TextUI,
 };
 
 use crate::config::{Config, ConfigChanged, RelPos};
@@ -14,6 +15,7 @@ pub struct UIPlugin;
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(PlaygroundUIPlugin)
+            .init_resource::<DebugLog>()
             .add_systems(Startup, build_ui)
             .add_observer(control_panel_system);
     }
@@ -34,7 +36,11 @@ fn build_ui(mut cmd: Commands, config: Res<Config>) {
     ))
     .with_children(|parent| {
         parent
-            .spawn((Panel, PanelTitle::new("Control Panel")))
+            .spawn((
+                Panel,
+                PanelTitle::new("Control Panel"),
+                MaxWidth(Val::Percent(10.)),
+            ))
             .with_children(|parent| {
                 parent.spawn(Header::new("Portal"));
                 parent.spawn((
