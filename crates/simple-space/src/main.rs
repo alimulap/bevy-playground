@@ -33,6 +33,7 @@ fn main() {
         .add_plugins(ShipPlugin)
         .add_plugins(AsteroidPlugin)
         .add_plugins(EnemyPlugin)
+        .add_plugins(HealthPlugin)
         .add_plugins(EntropyPlugin::<WyRand>::default())
         .init_resource::<CursorPosition>()
         .add_systems(Startup, setup)
@@ -53,6 +54,10 @@ fn setup(mut cmd: Commands) {
             scale: 3.,
             ..OrthographicProjection::default_2d()
         }),
+        Camera {
+            clear_color: ClearColorConfig::Custom(Color::BLACK),
+            ..default()
+        },
     ));
 }
 

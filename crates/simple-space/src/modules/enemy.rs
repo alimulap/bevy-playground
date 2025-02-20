@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
 
 use super::{
+    health::{HPBarConfig, Health},
     physics::GameLayer,
     ship::MaxSpeed,
     template::{Template, TemplateExt},
@@ -29,11 +30,13 @@ impl Template for Enemy {
     fn construct(mut cmd: EntityCommands<'_>, _: Self::Prop) -> EntityCommands<'_> {
         cmd.insert((
             Enemy,
+            Health(100.),
             MaxSpeed(1000.),
             RigidBody::Dynamic,
             GravityScale(0.),
             LockedAxes::ROTATION_LOCKED,
             Transform::from_xyz(300., -300., 0.),
+            HPBarConfig { y_offset: 75. },
         ))
         .with_children(|parent| {
             parent.spawn((

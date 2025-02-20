@@ -9,6 +9,7 @@ use super::{
     block::Block,
     bullet::{Bullet, BulletProp, BulletType},
     enemy::Enemy,
+    health::{HPBarConfig, Health},
     physics::GameLayer,
     template::TemplateExt,
 };
@@ -64,6 +65,7 @@ fn setup(mut cmd: Commands) {
 
     cmd.spawn((
         Ship,
+        Health(100.),
         MaxSpeed(1000.),
         RigidBody::Dynamic,
         GravityScale(0.),
@@ -74,6 +76,7 @@ fn setup(mut cmd: Commands) {
             GameLayer::Player,
             [GameLayer::Default, GameLayer::Block, GameLayer::Enemy],
         ),
+        HPBarConfig { y_offset: 65. },
     ))
     .with_children(|parent| {
         parent.spawn((
