@@ -1,8 +1,17 @@
 use avian2d::{math::PI, prelude::*};
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
+use playground_ui::DebugLog;
 
-use super::template::Template;
+use super::{health::Health, template::Template};
+
+pub struct BulletPlugin;
+
+impl Plugin for BulletPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, apply_bullet_damage);
+    }
+}
 
 #[derive(Component, Clone)]
 #[require(Transform, Visibility)]
@@ -73,5 +82,29 @@ impl Template for Bullet {
             ));
         });
         cmd
+    }
+}
+
+fn apply_bullet_damage(
+    mut cmd: Commands,
+    bullets: Query<(Entity, Ref<CollidingEntities>), (With<Bullet>, Changed<CollidingEntities>)>,
+    // enemy: Query<Has<Enemy>>,
+    // block: Query<Has<Block>>,
+    mut health: Query<&mut Health>,
+    mut debug_log: ResMut<DebugLog>,
+) {
+    for (id, entities) in bullets.iter() {
+        let mut should_despawn = false;
+        for entity in entities.iter() {
+            debug_log.push(format!("Bullet collided with entity {:?}", entity));
+            if let Ok(mut health) = health.get_mut(*entity) {
+                debug_log.push(format!("Entity has health {:?}", health.0));
+                health.0 -= 10.;
+                should_despawn = true;
+            }
+        }
+        if should_despawn {
+            cmd.entity(id).despawn_recursive();
+        }
     }
 }

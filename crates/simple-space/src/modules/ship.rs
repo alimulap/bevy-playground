@@ -1,14 +1,14 @@
 use avian2d::{math::Vector, prelude::*};
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
-use playground_ui::DebugLog;
+// use playground_ui::DebugLog;
 
 use crate::CursorPosition;
 
 use super::{
-    block::Block,
+    // block::Block,
     bullet::{Bullet, BulletProp, BulletType},
-    enemy::Enemy,
+    // enemy::Enemy,
     health::{HPBarConfig, Health},
     physics::GameLayer,
     template::TemplateExt,
@@ -27,7 +27,7 @@ impl Plugin for ShipPlugin {
                 rotate_with_keyboard.run_if(resource_equals(RotateMethod::Keyboard)),
                 fire_tick,
                 shoot_bullet.run_if(fire_button_pressed.and(can_fire)),
-                despawn_bullets,
+                // despawn_bullets,
             ),
         );
     }
@@ -262,25 +262,4 @@ fn shoot_bullet(
         bullet_type: BulletType::Standard,
         layers: ship_bullet_layers(),
     });
-}
-
-fn despawn_bullets(
-    mut cmd: Commands,
-    bullets: Query<(Entity, Ref<CollidingEntities>), (With<Bullet>, Changed<CollidingEntities>)>,
-    enemy: Query<Has<Enemy>>,
-    block: Query<Has<Block>>,
-    mut debug_log: ResMut<DebugLog>,
-) {
-    for (id, entities) in bullets.iter() {
-        let mut should_despawn = false;
-        for entity in entities.iter() {
-            debug_log.push(format!("Bullet collided with entity {:?}", entity));
-            if enemy.get(*entity).is_ok() || block.get(*entity).is_ok() {
-                should_despawn = true;
-            }
-        }
-        if should_despawn {
-            cmd.entity(id).despawn_recursive();
-        }
-    }
 }

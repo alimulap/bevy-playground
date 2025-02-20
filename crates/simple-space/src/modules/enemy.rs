@@ -37,6 +37,16 @@ impl Template for Enemy {
             LockedAxes::ROTATION_LOCKED,
             Transform::from_xyz(300., -300., 0.),
             HPBarConfig { y_offset: 75. },
+            Collider::regular_polygon(60., 6),
+            CollisionLayers::new(
+                GameLayer::Enemy,
+                [
+                    GameLayer::Default,
+                    GameLayer::Block,
+                    GameLayer::Bullet,
+                    GameLayer::Player,
+                ],
+            ),
         ))
         .with_children(|parent| {
             parent.spawn((
@@ -51,18 +61,6 @@ impl Template for Enemy {
                 },
                 Fill::color(Color::WHITE.with_alpha(0.)),
                 Stroke::new(Color::WHITE, 3.),
-            ));
-            parent.spawn((
-                Collider::regular_polygon(60., 6),
-                CollisionLayers::new(
-                    GameLayer::Enemy,
-                    [
-                        GameLayer::Default,
-                        GameLayer::Block,
-                        GameLayer::Bullet,
-                        GameLayer::Player,
-                    ],
-                ),
             ));
         });
         cmd
