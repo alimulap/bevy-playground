@@ -120,7 +120,6 @@ fn sync_health_hpbar(
                 } else {
                     hp.0 / max_hp.0 * HP_BAR_WIDTH
                 };
-                // info!("HP: {}, Max HP: {}, Width: {}", hp.0, max_hp.0, width);
                 *path = ShapePath::build_as(&shapes::Rectangle {
                     extents: Vec2::new(width, 5.),
                     origin: RectangleOrigin::TopLeft,

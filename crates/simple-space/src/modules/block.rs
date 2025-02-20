@@ -41,7 +41,6 @@ impl Template for Block {
                 ],
             ),
             RigidBody::Static,
-            SweptCcd::default(),
         ));
 
         cmd

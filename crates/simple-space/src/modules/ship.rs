@@ -1,14 +1,11 @@
 use avian2d::{math::Vector, prelude::*};
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
-// use playground_ui::DebugLog;
 
 use crate::CursorPosition;
 
 use super::{
-    // block::Block,
     bullet::{Bullet, BulletProp, BulletType},
-    // enemy::Enemy,
     health::{HPBarConfig, Health},
     physics::GameLayer,
     template::TemplateExt,
@@ -191,7 +188,6 @@ fn look_at_cursor(
     cursor_position: Res<CursorPosition>,
     camera: Single<(&Camera, &GlobalTransform)>,
     mut ship: Single<(&mut Transform, &GlobalTransform), With<Ship>>,
-    // mut debug_log: ResMut<DebugLog>,
 ) {
     let cursor_position = cursor_position.0;
     let ship_on_viewport = camera
@@ -202,10 +198,6 @@ fn look_at_cursor(
         (ship_on_viewport.y - cursor_position.y).atan2(cursor_position.x - ship_on_viewport.x);
     ship.0.rotation =
         Quat::from(Rotation::from(ship.0.rotation).nlerp(Rotation::radians(angle), 0.5));
-    // debug_log.push(format!(
-    //     "ship rotation: {:.2?}",
-    //     ship.0.rotation.to_euler(EulerRot::XYZ)
-    // ));
 }
 
 fn rotate_with_keyboard(
