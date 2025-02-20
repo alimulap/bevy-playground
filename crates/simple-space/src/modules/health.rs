@@ -51,9 +51,10 @@ fn setup(world: &mut World) {
                         ShapeBundle {
                             path: GeometryBuilder::build_as(&shapes::Rectangle {
                                 extents: Vec2::new(HP_BAR_WIDTH, 5.),
+                                origin: RectangleOrigin::TopLeft,
                                 ..default()
                             }),
-                            transform: Transform::from_xyz(0., y_offset, 0.),
+                            transform: Transform::from_xyz(-HP_BAR_WIDTH / 2., y_offset, 0.),
                             ..default()
                         },
                         Fill::color(Color::BLACK),
@@ -64,9 +65,14 @@ fn setup(world: &mut World) {
                         ShapeBundle {
                             path: GeometryBuilder::build_as(&shapes::Rectangle {
                                 extents: Vec2::new(HP_BAR_WIDTH, 5.),
+                                origin: RectangleOrigin::TopLeft,
                                 ..default()
                             }),
-                            transform: Transform::from_xyz(-5., y_offset - 5., 0.),
+                            transform: Transform::from_xyz(
+                                -HP_BAR_WIDTH / 2. - 5.,
+                                y_offset - 5.,
+                                0.,
+                            ),
                             ..default()
                         },
                         Fill::color(Color::WHITE),
@@ -109,10 +115,15 @@ fn sync_health_hpbar(
         let hp_bar_entity = hp_bar.get(*hpbar_id).unwrap();
         for (parent, mut path) in hp_bar_remaining.iter_mut() {
             if parent.entities()[0] == hp_bar_entity {
-                let width = hp.0 / max_hp.0 * HP_BAR_WIDTH;
+                let width = if max_hp.0.eq(&0.) {
+                    0.
+                } else {
+                    hp.0 / max_hp.0 * HP_BAR_WIDTH
+                };
                 // info!("HP: {}, Max HP: {}, Width: {}", hp.0, max_hp.0, width);
                 *path = ShapePath::build_as(&shapes::Rectangle {
                     extents: Vec2::new(width, 5.),
+                    origin: RectangleOrigin::TopLeft,
                     ..default()
                 });
             }
