@@ -33,6 +33,7 @@ struct HPBarRef(Entity);
 struct HPBarRemaining;
 
 const HP_BAR_WIDTH: f32 = 100.;
+const HP_BAR_HEIGHT: f32 = 5.;
 
 fn setup(world: &mut World) {
     world
@@ -50,7 +51,7 @@ fn setup(world: &mut World) {
                     parent.spawn((
                         ShapeBundle {
                             path: GeometryBuilder::build_as(&shapes::Rectangle {
-                                extents: Vec2::new(HP_BAR_WIDTH, 5.),
+                                extents: Vec2::new(HP_BAR_WIDTH, HP_BAR_HEIGHT),
                                 origin: RectangleOrigin::TopLeft,
                                 ..default()
                             }),
@@ -64,7 +65,7 @@ fn setup(world: &mut World) {
                         HPBarRemaining,
                         ShapeBundle {
                             path: GeometryBuilder::build_as(&shapes::Rectangle {
-                                extents: Vec2::new(HP_BAR_WIDTH, 5.),
+                                extents: Vec2::new(HP_BAR_WIDTH, HP_BAR_HEIGHT),
                                 origin: RectangleOrigin::TopLeft,
                                 ..default()
                             }),
@@ -115,13 +116,13 @@ fn sync_health_hpbar(
         let hp_bar_entity = hp_bar.get(*hpbar_id).unwrap();
         for (parent, mut path) in hp_bar_remaining.iter_mut() {
             if parent.entities()[0] == hp_bar_entity {
-                let width = if max_hp.0.eq(&0.) {
+                let width = if max_hp.0 <= 0. || hp.0 <= 0. {
                     0.
                 } else {
                     hp.0 / max_hp.0 * HP_BAR_WIDTH
                 };
                 *path = ShapePath::build_as(&shapes::Rectangle {
-                    extents: Vec2::new(width, 5.),
+                    extents: Vec2::new(width, HP_BAR_HEIGHT),
                     origin: RectangleOrigin::TopLeft,
                     ..default()
                 });
