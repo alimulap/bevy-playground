@@ -2,6 +2,7 @@ use avian2d::prelude::*;
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 use bevy_prototype_lyon::plugin::ShapePlugin;
 use bevy_rand::{plugin::EntropyPlugin, prelude::WyRand};
+use bevy_vector_shapes::Shape2dPlugin;
 use modules::*;
 use ui::UIPlugin;
 
@@ -29,12 +30,14 @@ fn main() {
         .add_plugins(PhysicsPlugins::default().with_length_unit(20.))
         // .add_plugins(PhysicsDebugPlugin::default())
         .add_plugins(ShapePlugin)
+        .add_plugins(Shape2dPlugin::default())
         .add_plugins(UIPlugin)
         .add_plugins(ShipPlugin)
         .add_plugins(AsteroidPlugin)
         .add_plugins(EnemyPlugin)
         .add_plugins(HealthPlugin)
         .add_plugins(BulletPlugin)
+        .add_plugins(VfxPlugin)
         .add_plugins(EntropyPlugin::<WyRand>::default())
         .init_resource::<CursorPosition>()
         .add_systems(Startup, setup)

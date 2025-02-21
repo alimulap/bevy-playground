@@ -1,9 +1,14 @@
 use avian2d::{math::PI, prelude::*};
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
+use bevy_rand::{global::GlobalEntropy, prelude::WyRand, traits::ForkableRng};
 use playground_ui::DebugLog;
 
-use super::{health::Health, template::Template};
+use super::{
+    health::Health,
+    template::{Template, TemplateExt},
+    vfx::{Vfx, VfxProp, VfxType},
+};
 
 pub struct BulletPlugin;
 
@@ -87,13 +92,15 @@ impl Template for Bullet {
 
 fn apply_bullet_damage(
     mut cmd: Commands,
-    bullets: Query<(Entity, Ref<CollidingEntities>), (With<Bullet>, Changed<CollidingEntities>)>,
-    // enemy: Query<Has<Enemy>>,
-    // block: Query<Has<Block>>,
+    bullets: Query<
+        (Entity, Ref<CollidingEntities>, &Transform),
+        (With<Bullet>, Changed<CollidingEntities>),
+    >,
     mut health: Query<&mut Health>,
     mut debug_log: ResMut<DebugLog>,
+    mut rng: GlobalEntropy<WyRand>,
 ) {
-    for (id, entities) in bullets.iter() {
+    for (id, entities, transform) in bullets.iter() {
         let mut should_despawn = false;
         for entity in entities.iter() {
             debug_log.push(format!("Bullet collided with entity {:?}", entity));
@@ -101,6 +108,11 @@ fn apply_bullet_damage(
                 debug_log.push(format!("Entity has health {:?}", health.0));
                 health.0 -= 10.;
                 should_despawn = true;
+                cmd.template::<Vfx>(VfxProp {
+                    vfx_type: VfxType::Explosion,
+                    position: transform.translation,
+                    rng: rng.fork_rng(),
+                });
             }
         }
         if should_despawn {
